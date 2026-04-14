@@ -18,7 +18,7 @@ app.use(session({
 }));
 
 // 🔗 MONGODB CONNECT
-mongoose.connect("YOUR_MONGODB_URL")
+mongoose.connect("mongodb+srv://admin:123456@cluster0.xxxx.mongodb.net/bettingDB?retryWrites=true&w=majority")
 .then(()=>console.log("✅ MongoDB Connected"))
 .catch(err=>console.log(err));
 
