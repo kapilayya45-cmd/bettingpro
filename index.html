@@ -83,7 +83,6 @@ async function deposit(){
  body:JSON.stringify({amount:amount.value,utr:utr.value})});
  alert((await r.json()).msg);
 }
-
 setInterval(loadMatches,3000);
 loadMatches();
 </script>
