@@ -22,6 +22,9 @@ let users = [];
 // 💳 DEPOSITS
 let deposits = [];
 
+// 🔐 ADMIN PASS
+const ADMIN_PASS = "1234";
+
 // ROOT
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
@@ -61,11 +64,10 @@ app.get("/logout", (req, res) => {
   res.json({ msg: "Logged out" });
 });
 
-// 🔴 LIVE MATCHES (CRICAPI)
+// 🔴 LIVE MATCHES
 app.get("/matches", async (req, res) => {
   try {
     const url = "https://api.cricapi.com/v1/currentMatches?apikey=d28d8e50-fc20-441b-919c-861a9e1b306d&offset=0";
-
     const response = await fetch(url);
     const data = await response.json();
 
@@ -98,7 +100,7 @@ app.get("/matches", async (req, res) => {
   }
 });
 
-// 💰 BET SYSTEM
+// 💰 BET
 app.post("/bet", (req, res) => {
   if (!req.session.user) return res.json({ msg: "Login required" });
 
@@ -123,7 +125,7 @@ app.post("/bet", (req, res) => {
   res.json({ msg: result, balance: user.wallet });
 });
 
-// 💳 DEPOSIT REQUEST
+// 💳 DEPOSIT
 app.post("/deposit", (req, res) => {
   if (!req.session.user) return res.json({ msg: "Login required" });
 
@@ -139,19 +141,39 @@ app.post("/deposit", (req, res) => {
   res.json({ msg: "Deposit request sent" });
 });
 
-// ✅ ADMIN APPROVE
-app.get("/approve", (req, res) => {
-  deposits.forEach(d => {
-    if (d.status === "pending") {
-      let user = users.find(u => u.username === d.username);
-      if (user) {
-        user.wallet += d.amount;
-        d.status = "approved";
-      }
-    }
-  });
+// 🔐 ADMIN APIs
 
-  res.json({ msg: "All deposits approved" });
+app.get("/admin/deposits", (req, res) => {
+  if (req.query.pass !== ADMIN_PASS) return res.json({ msg: "Unauthorized" });
+  res.json(deposits);
+});
+
+app.post("/admin/approve", (req, res) => {
+  const { pass, index } = req.body;
+  if (pass !== ADMIN_PASS) return res.json({ msg: "Unauthorized" });
+
+  let d = deposits[index];
+  if (!d || d.status !== "pending") return res.json({ msg: "Invalid" });
+
+  let user = users.find(u => u.username === d.username);
+  if (user) {
+    user.wallet += d.amount;
+    d.status = "approved";
+  }
+
+  res.json({ msg: "Approved" });
+});
+
+app.post("/admin/reject", (req, res) => {
+  const { pass, index } = req.body;
+  if (pass !== ADMIN_PASS) return res.json({ msg: "Unauthorized" });
+
+  let d = deposits[index];
+  if (!d) return res.json({ msg: "Invalid" });
+
+  d.status = "rejected";
+
+  res.json({ msg: "Rejected" });
 });
 
 // PORT
