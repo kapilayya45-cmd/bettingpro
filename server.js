@@ -1,35 +1,185 @@
-app.get("/matches", async (req,res)=>{
- try{
-  let r = await fetch("https://api.cricapi.com/v1/currentMatches?apikey=d28d8e50-fc20-441b-919c-861a9e1b306d&offset=0");
-  let data = await r.json();
+const express = require("express");
+const cors = require("cors");
+const path = require("path");
+const session = require("express-session");
+const mongoose = require("mongoose");
 
-  let matches = data.data?.slice(0,5).map(m=>{
-    let runs = m.score?.[0]?.r || Math.floor(Math.random()*200);
-    let w = m.score?.[0]?.w || Math.floor(Math.random()*10);
+const app = express();
 
-    return {
-      name: m.name,
-      score: `${runs}/${w}`,
-      status: m.status,
-      oddsA: (1.5 + Math.random()).toFixed(2),
-      oddsB: (1.5 + Math.random()).toFixed(2)
-    };
-  });
+app.use(cors());
+app.use(express.json());
+app.use(express.static(__dirname));
 
-  // 👉 if API empty → fallback
-  if(!matches || matches.length === 0){
-    throw "no matches";
+app.use(session({
+  secret: "secret123",
+  resave: false,
+  saveUninitialized: true
+}));
+
+// 🔗 MONGODB
+mongoose.connect("mongodb+srv://admin:123456@cluster0.ui0ovpg.mongodb.net/bettingDB?retryWrites=true&w=majority")
+.then(()=>console.log("MongoDB Connected"))
+.catch(err=>console.log(err));
+
+// MODELS
+const User = mongoose.model("User", {
+  username: String,
+  password: String,
+  wallet: Number
+});
+
+const Bet = mongoose.model("Bet", {
+  username: String,
+  amount: Number,
+  odds: Number,
+  result: String,
+  win: Number,
+  time: String
+});
+
+const Deposit = mongoose.model("Deposit", {
+  username: String,
+  amount: Number,
+  utr: String,
+  status: String
+});
+
+const Withdraw = mongoose.model("Withdraw", {
+  username: String,
+  amount: Number,
+  upi: String,
+  status: String
+});
+
+// ROOT
+app.get("/", (req,res)=>{
+  res.sendFile(path.join(__dirname,"index.html"));
+});
+
+// REGISTER
+app.post("/register", async (req,res)=>{
+  let {username,password} = req.body;
+
+  if(await User.findOne({username}))
+    return res.json({msg:"User exists"});
+
+  await User.create({username,password,wallet:1000});
+  res.json({msg:"Registered"});
+});
+
+// LOGIN
+app.post("/login", async (req,res)=>{
+  let {username,password} = req.body;
+
+  let user = await User.findOne({username,password});
+  if(!user) return res.json({msg:"Invalid"});
+
+  req.session.user = {username:user.username};
+  res.json({msg:"Login success"});
+});
+
+// USER
+app.get("/me", async (req,res)=>{
+  if(!req.session.user) return res.json({});
+  let user = await User.findOne({username:req.session.user.username});
+  res.json(user);
+});
+
+// 🔥 FAKE LIVE MATCHES (NO API FAIL EVER)
+app.get("/matches", (req,res)=>{
+ res.json([
+  {name:"IND vs AUS",score:"120/3",status:"Live",oddsA:(1.5+Math.random()).toFixed(2),oddsB:(1.5+Math.random()).toFixed(2)},
+  {name:"CSK vs MI",score:"90/2",status:"Live",oddsA:(1.5+Math.random()).toFixed(2),oddsB:(1.5+Math.random()).toFixed(2)},
+  {name:"RCB vs KKR",score:"150/5",status:"Live",oddsA:(1.5+Math.random()).toFixed(2),oddsB:(1.5+Math.random()).toFixed(2)},
+  {name:"ENG vs SA",score:"200/6",status:"Live",oddsA:(1.5+Math.random()).toFixed(2),oddsB:(1.5+Math.random()).toFixed(2)}
+ ]);
+});
+
+// BET
+app.post("/bet", async (req,res)=>{
+  if(!req.session.user) return res.json({msg:"Login required"});
+
+  let {amount,odds} = req.body;
+  let user = await User.findOne({username:req.session.user.username});
+
+  amount = Number(amount);
+
+  if(amount<=0) return res.json({msg:"Invalid"});
+  if(amount>user.wallet) return res.json({msg:"No balance"});
+
+  user.wallet -= amount;
+
+  let result="LOSE", win=0;
+
+  if(Math.random()>0.5){
+    win = amount * odds;
+    user.wallet += win;
+    result="WIN";
   }
 
-  res.json(matches);
+  await user.save();
 
- }catch{
-  // 🔥 ALWAYS SHOW FAKE MATCHES
-  res.json([
-    {name:"IND vs AUS",score:"120/3",status:"Live",oddsA:(1.5+Math.random()).toFixed(2),oddsB:(1.5+Math.random()).toFixed(2)},
-    {name:"CSK vs MI",score:"90/2",status:"Live",oddsA:(1.5+Math.random()).toFixed(2),oddsB:(1.5+Math.random()).toFixed(2)},
-    {name:"RCB vs KKR",score:"150/5",status:"Live",oddsA:(1.5+Math.random()).toFixed(2),oddsB:(1.5+Math.random()).toFixed(2)},
-    {name:"ENG vs SA",score:"200/6",status:"Live",oddsA:(1.5+Math.random()).toFixed(2),oddsB:(1.5+Math.random()).toFixed(2)}
-  ]);
- }
+  await Bet.create({
+    username:user.username,
+    amount,
+    odds,
+    result,
+    win,
+    time:new Date().toLocaleString()
+  });
+
+  res.json({msg:result});
+});
+
+// HISTORY
+app.get("/history", async (req,res)=>{
+  if(!req.session.user) return res.json([]);
+  let data = await Bet.find({username:req.session.user.username}).sort({_id:-1});
+  res.json(data);
+});
+
+// DEPOSIT
+app.post("/deposit", async (req,res)=>{
+  if(!req.session.user) return res.json({msg:"Login required"});
+
+  let {amount,utr} = req.body;
+
+  await Deposit.create({
+    username:req.session.user.username,
+    amount,
+    utr,
+    status:"pending"
+  });
+
+  res.json({msg:"Deposit sent"});
+});
+
+// WITHDRAW
+app.post("/withdraw", async (req,res)=>{
+  if(!req.session.user) return res.json({msg:"Login required"});
+
+  let {amount,upi} = req.body;
+  let user = await User.findOne({username:req.session.user.username});
+
+  amount = Number(amount);
+
+  if(amount<=0) return res.json({msg:"Invalid"});
+  if(amount>user.wallet) return res.json({msg:"No balance"});
+
+  user.wallet -= amount;
+  await user.save();
+
+  await Withdraw.create({
+    username:user.username,
+    amount,
+    upi,
+    status:"pending"
+  });
+
+  res.json({msg:"Withdraw sent"});
+});
+
+// PORT
+app.listen(process.env.PORT || 3001, "0.0.0.0", ()=>{
+  console.log("Server running");
 });
