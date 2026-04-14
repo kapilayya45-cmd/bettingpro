@@ -2,23 +2,31 @@
 <html>
 <body style="background:black;color:white;text-align:center">
 
-<h2>ADMIN</h2>
+<h2>ADMIN PANEL</h2>
 <input id="pass">
 <button onclick="load()">Load</button>
 
-<div id="list"></div>
+<h3>Deposits</h3>
+<div id="dlist"></div>
+
+<h3>Withdraws</h3>
+<div id="wlist"></div>
 
 <script>
 async function load(){
- let r=await fetch(`/admin/deposits?pass=${pass.value}`);
- let d=await r.json();
+ let p=pass.value;
 
- list.innerHTML=d.map((x,i)=>`
-  <div>
-   ${x.username} ₹${x.amount} ${x.status}
-   <button onclick="approve(${i})">✔</button>
-   <button onclick="reject(${i})">❌</button>
-  </div>`).join("");
+ let d=await fetch(`/admin/deposits?pass=${p}`).then(r=>r.json());
+ dlist.innerHTML=d.map((x,i)=>`
+  <div>${x.username} ₹${x.amount} ${x.status}
+  <button onclick="approve(${i})">✔</button>
+  <button onclick="reject(${i})">❌</button></div>`).join("");
+
+ let w=await fetch(`/admin/withdraws?pass=${p}`).then(r=>r.json());
+ wlist.innerHTML=w.map((x,i)=>`
+  <div>${x.username} ₹${x.amount} ${x.status}
+  <button onclick="wapprove(${i})">✔</button>
+  <button onclick="wreject(${i})">❌</button></div>`).join("");
 }
 
 async function approve(i){
@@ -30,6 +38,20 @@ async function approve(i){
 
 async function reject(i){
  await fetch("/admin/reject",{method:"POST",
+ headers:{"Content-Type":"application/json"},
+ body:JSON.stringify({pass:pass.value,index:i})});
+ load();
+}
+
+async function wapprove(i){
+ await fetch("/admin/withdraw-approve",{method:"POST",
+ headers:{"Content-Type":"application/json"},
+ body:JSON.stringify({pass:pass.value,index:i})});
+ load();
+}
+
+async function wreject(i){
+ await fetch("/admin/withdraw-reject",{method:"POST",
  headers:{"Content-Type":"application/json"},
  body:JSON.stringify({pass:pass.value,index:i})});
  load();
