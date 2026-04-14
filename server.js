@@ -16,8 +16,11 @@ app.use(session({
   saveUninitialized: true
 }));
 
-// 👤 users
+// 👤 USERS
 let users = [];
+
+// 💳 DEPOSITS
+let deposits = [];
 
 // ROOT
 app.get("/", (req, res) => {
@@ -58,7 +61,7 @@ app.get("/logout", (req, res) => {
   res.json({ msg: "Logged out" });
 });
 
-// 🔴 REAL MATCHES (YOUR API)
+// 🔴 LIVE MATCHES (CRICAPI)
 app.get("/matches", async (req, res) => {
   try {
     const url = "https://api.cricapi.com/v1/currentMatches?apikey=d28d8e50-fc20-441b-919c-861a9e1b306d&offset=0";
@@ -68,56 +71,36 @@ app.get("/matches", async (req, res) => {
 
     if (!data.data || data.data.length === 0) {
       return res.json([
-        {
-          id: "1",
-          name: "IND vs AUS",
-          score: "120/2",
-          status: "Live",
-          oddsA: 1.8,
-          oddsB: 2.0
-        }
+        { id:"1", name:"IND vs AUS", score:"120/2", status:"Live", oddsA:1.8, oddsB:2.0 }
       ]);
     }
 
-    const matches = data.data.slice(0, 5).map(m => {
+    const matches = data.data.slice(0,5).map(m => {
       let runs = m.score?.[0]?.r || 100;
       let wickets = m.score?.[0]?.w || 2;
-
-      // 🎯 smart odds
-      let oddsA = (2 - runs / 200).toFixed(2);
-      let oddsB = (1 + runs / 200).toFixed(2);
 
       return {
         id: m.id,
         name: m.name,
         score: `${runs}/${wickets}`,
         status: m.status,
-        oddsA,
-        oddsB
+        oddsA: (2 - runs/200).toFixed(2),
+        oddsB: (1 + runs/200).toFixed(2)
       };
     });
 
     res.json(matches);
 
-  } catch (err) {
+  } catch {
     res.json([
-      {
-        id: "1",
-        name: "API Error Match",
-        score: "100/2",
-        status: "Error",
-        oddsA: 1.9,
-        oddsB: 1.9
-      }
+      { id:"1", name:"Error Match", score:"100/2", status:"Error", oddsA:1.9, oddsB:1.9 }
     ]);
   }
 });
 
-// 💰 BET
+// 💰 BET SYSTEM
 app.post("/bet", (req, res) => {
-  if (!req.session.user) {
-    return res.json({ msg: "Login required" });
-  }
+  if (!req.session.user) return res.json({ msg: "Login required" });
 
   let { amount, odds } = req.body;
   let user = req.session.user;
@@ -137,15 +120,42 @@ app.post("/bet", (req, res) => {
     result = "WIN";
   }
 
-  res.json({
-    msg: result,
-    balance: user.wallet
-  });
+  res.json({ msg: result, balance: user.wallet });
 });
 
-// 🚀 NETWORK + DEPLOY READY
-const PORT = process.env.PORT || 3001;
+// 💳 DEPOSIT REQUEST
+app.post("/deposit", (req, res) => {
+  if (!req.session.user) return res.json({ msg: "Login required" });
 
+  let { amount, utr } = req.body;
+
+  deposits.push({
+    username: req.session.user.username,
+    amount: Number(amount),
+    utr,
+    status: "pending"
+  });
+
+  res.json({ msg: "Deposit request sent" });
+});
+
+// ✅ ADMIN APPROVE
+app.get("/approve", (req, res) => {
+  deposits.forEach(d => {
+    if (d.status === "pending") {
+      let user = users.find(u => u.username === d.username);
+      if (user) {
+        user.wallet += d.amount;
+        d.status = "approved";
+      }
+    }
+  });
+
+  res.json({ msg: "All deposits approved" });
+});
+
+// PORT
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, "0.0.0.0", () => {
-  console.log("🔥 Server running → http://localhost:" + PORT);
+  console.log("🔥 Running on " + PORT);
 });
