@@ -7,6 +7,38 @@
 <style>
 body{background:#0b1220;color:white;font-family:Arial;text-align:center}
 
+/* HEADER */
+.header{
+ background:#111827;
+ padding:15px;
+ font-weight:bold;
+ color:#22c55e;
+}
+
+/* INPUT */
+input{
+ padding:10px;
+ margin:5px;
+ border-radius:8px;
+ border:none;
+ width:40%;
+}
+
+/* BUTTON */
+button{
+ padding:10px;
+ margin:5px;
+ border:none;
+ border-radius:10px;
+ color:white;
+ cursor:pointer;
+ transition:0.2s;
+}
+button:hover{transform:scale(1.05)}
+
+.betA{background:#16a34a;}
+.betB{background:#dc2626;}
+
 /* CARD */
 .card{
  background:#1f2937;
@@ -18,22 +50,6 @@ body{background:#0b1220;color:white;font-family:Arial;text-align:center}
 }
 .card:hover{transform:scale(1.03)}
 
-/* BUTTONS */
-button{
- padding:10px;
- margin:5px;
- border:none;
- border-radius:10px;
- color:white;
- cursor:pointer;
- transition:0.2s;
-}
-.betA{background:#16a34a;}
-.betB{background:#dc2626;}
-
-button:hover{transform:scale(1.1)}
-
-/* ODDS FLASH */
 .up{color:#22c55e;}
 .down{color:#ef4444;}
 
@@ -41,51 +57,162 @@ button:hover{transform:scale(1.1)}
  from{opacity:0;transform:translateY(10px)}
  to{opacity:1}
 }
+
+/* HISTORY */
+.win{color:lime;}
+.lose{color:red}
+
+/* POPUP */
+#popup{
+ position:fixed;
+ top:20px;
+ left:50%;
+ transform:translateX(-50%);
+ background:#111827;
+ padding:10px 20px;
+ border-radius:10px;
+ display:none;
+}
 </style>
 </head>
 
 <body>
 
-<h2>🔥 LIVE BETTING</h2>
+<div class="header">🔥 PRO BETTING</div>
 
+<!-- LOGIN -->
+<input id="user" placeholder="Username">
+<input id="pass" type="password" placeholder="Password"><br>
+<button onclick="register()">Register</button>
+<button onclick="login()">Login</button>
+
+<div id="info"></div>
+
+<!-- DEPOSIT -->
+<h3>💰 Deposit</h3>
+<input id="amount" placeholder="Amount">
+<input id="utr" placeholder="UTR">
+<button onclick="deposit()">Send</button>
+
+<!-- WITHDRAW -->
+<h3>💸 Withdraw</h3>
+<input id="wamount" placeholder="Amount">
+<input id="upi" placeholder="UPI">
+<button onclick="withdraw()">Withdraw</button>
+
+<!-- MATCHES -->
+<h3>🎮 Live Matches</h3>
 <div id="matches"></div>
 
+<!-- HISTORY -->
+<h3>📊 Bet History</h3>
+<div id="history"></div>
+
+<div id="popup"></div>
+
 <script>
-let lastOdds = {};
+let lastOdds={};
 
+// popup
+function show(msg){
+ let p=document.getElementById("popup");
+ p.innerText=msg;
+ p.style.display="block";
+ setTimeout(()=>p.style.display="none",2000);
+}
+
+// AUTH
+async function register(){
+ let r=await fetch("/register",{method:"POST",
+ headers:{"Content-Type":"application/json"},
+ body:JSON.stringify({username:user.value,password:pass.value})});
+ show((await r.json()).msg);
+}
+
+async function login(){
+ let r=await fetch("/login",{method:"POST",
+ headers:{"Content-Type":"application/json"},
+ body:JSON.stringify({username:user.value,password:pass.value})});
+ let d=await r.json();
+ show(d.msg);
+ loadUser(); loadHistory();
+}
+
+async function loadUser(){
+ let r=await fetch("/me");
+ let d=await r.json();
+ if(d.username) info.innerHTML=`👤 ${d.username} | 💰 ₹${d.wallet}`;
+}
+
+// MATCHES + LIVE ODDS
 async function loadMatches(){
- let m = await fetch("/matches").then(r=>r.json());
+ let m=await fetch("/matches").then(r=>r.json());
 
- matches.innerHTML = m.map(x=>{
+ matches.innerHTML=m.map(x=>{
+  let prev=lastOdds[x.name]||{A:x.oddsA,B:x.oddsB};
 
-  let key = x.name;
+  let upA=x.oddsA>prev.A;
+  let upB=x.oddsB>prev.B;
 
-  let prev = lastOdds[key] || {A:x.oddsA,B:x.oddsB};
-
-  let upA = x.oddsA > prev.A;
-  let upB = x.oddsB > prev.B;
-
-  lastOdds[key] = {A:x.oddsA,B:x.oddsB};
+  lastOdds[x.name]={A:x.oddsA,B:x.oddsB};
 
   return `
   <div class="card">
-    <b>${x.name}</b><br>
-    ${x.score}<br>
+   <b>${x.name}</b><br>${x.score}<br>
 
-    <button class="betA ${upA?'up':'down'}">
-      A ${x.oddsA}
-    </button>
+   <button class="betA ${upA?'up':'down'}" onclick="bet(${x.oddsA})">
+    A ${x.oddsA}
+   </button>
 
-    <button class="betB ${upB?'up':'down'}">
-      B ${x.oddsB}
-    </button>
+   <button class="betB ${upB?'up':'down'}" onclick="bet(${x.oddsB})">
+    B ${x.oddsB}
+   </button>
   </div>`;
  }).join("");
 }
 
-// 🔥 FAST REFRESH (live feel)
-setInterval(loadMatches,2000);
+// BET
+async function bet(o){
+ let amt=prompt("Enter amount");
+ let r=await fetch("/bet",{method:"POST",
+ headers:{"Content-Type":"application/json"},
+ body:JSON.stringify({amount:amt,odds:o})});
+ let d=await r.json();
 
+ show(d.msg);
+ loadUser(); loadHistory();
+}
+
+// DEPOSIT
+async function deposit(){
+ let r=await fetch("/deposit",{method:"POST",
+ headers:{"Content-Type":"application/json"},
+ body:JSON.stringify({amount:amount.value,utr:utr.value})});
+ show((await r.json()).msg);
+}
+
+// WITHDRAW
+async function withdraw(){
+ let r=await fetch("/withdraw",{method:"POST",
+ headers:{"Content-Type":"application/json"},
+ body:JSON.stringify({amount:wamount.value,upi:upi.value})});
+ show((await r.json()).msg);
+ loadUser();
+}
+
+// HISTORY
+async function loadHistory(){
+ let h=await fetch("/history").then(r=>r.json());
+
+ history.innerHTML=h.map(x=>`
+  <div class="card">
+   ₹${x.amount} 
+   <span class="${x.result=='WIN'?'win':'lose'}">${x.result}</span>
+  </div>`).join("");
+}
+
+// AUTO REFRESH
+setInterval(loadMatches,2000);
 loadMatches();
 </script>
 
