@@ -1,37 +1,24 @@
 <!DOCTYPE html>
 <html>
-<head>
-<title>Admin Panel</title>
-<style>
-body{background:#0f172a;color:white;text-align:center}
-.card{background:#1e293b;margin:10px;padding:10px;border-radius:10px}
-.approve{background:green}
-.reject{background:red}
-</style>
-</head>
+<body style="background:black;color:white;text-align:center">
 
-<body>
-
-<h2>🔐 ADMIN PANEL</h2>
-
-<input id="pass" placeholder="Password">
+<h2>ADMIN</h2>
+<input id="pass">
 <button onclick="load()">Load</button>
 
 <div id="list"></div>
 
 <script>
 async function load(){
- let p=pass.value;
- let res=await fetch(`/admin/deposits?pass=${p}`);
- let data=await res.json();
+ let r=await fetch(`/admin/deposits?pass=${pass.value}`);
+ let d=await r.json();
 
- list.innerHTML=data.map((d,i)=>`
-  <div class="card">
-   ${d.username}<br>₹${d.amount}<br>${d.utr}<br>${d.status}<br>
-   <button class="approve" onclick="approve(${i})">Approve</button>
-   <button class="reject" onclick="reject(${i})">Reject</button>
-  </div>
- `).join("");
+ list.innerHTML=d.map((x,i)=>`
+  <div>
+   ${x.username} ₹${x.amount} ${x.status}
+   <button onclick="approve(${i})">✔</button>
+   <button onclick="reject(${i})">❌</button>
+  </div>`).join("");
 }
 
 async function approve(i){
