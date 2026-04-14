@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Pro Betting App</title>
+
+  <style>
+    body { margin:0; background:#0f172a; color:white; font-family:Arial; }
+    header { background:#111827; padding:15px; text-align:center; color:#22c55e; }
+
+    .top { text-align:center; padding:10px; }
+    input { padding:8px; margin:5px; border-radius:5px; border:none; }
+
+    .btn { padding:8px 12px; margin:5px; border:none; border-radius:5px; cursor:pointer; }
+    .register { background:#3b82f6; }
+    .login { background:#22c55e; }
+    .logout { background:#ef4444; }
+
+    .container { padding:15px; }
+
+    .card {
+      background:#1e293b;
+      padding:15px;
+      margin:10px 0;
+      border-radius:10px;
+    }
+
+    button {
+      padding:10px;
+      margin:5px;
+      border:none;
+      border-radius:5px;
+      color:white;
+      cursor:pointer;
+    }
+
+    .teamA { background:green; }
+    .teamB { background:red; }
+  </style>
+</head>
+
+<body>
+
+<header>🔥 PRO LIVE BETTING</header>
+
+<div class="top">
+  <input id="user" placeholder="Username">
+  <input id="pass" type="password" placeholder="Password">
+
+  <button class="btn register" onclick="register()">Register</button>
+  <button class="btn login" onclick="login()">Login</button>
+  <button class="btn logout" onclick="logout()">Logout</button>
+
+  <div id="userInfo"></div>
+</div>
+
+<div class="container" id="matches"></div>
+
+<script>
+let currentUser = null;
+
+// REGISTER
+async function register() {
+  let res = await fetch("/register", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({username:user.value,password:pass.value})
+  });
+  let data = await res.json();
+  alert(data.msg);
+}
+
+// LOGIN
+async function login() {
+  let res = await fetch("/login", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({username:user.value,password:pass.value})
+  });
+  let data = await res.json();
+  alert(data.msg);
+  loadUser();
+}
+
+// LOAD USER
+async function loadUser() {
+  let res = await fetch("/me");
+  let data = await res.json();
+
+  if (data.username) {
+    currentUser = data;
+    userInfo.innerHTML = `👤 ${data.username} | 💰 ₹${data.wallet}`;
+  } else {
+    userInfo.innerHTML = "";
+  }
+}
+
+// LOGOUT
+async function logout() {
+  await fetch("/logout");
+  alert("Logged out");
+  userInfo.innerHTML = "";
+}
+
+// LOAD MATCHES
+async function loadMatches() {
+  let matches = await fetch("/matches").then(r=>r.json());
+
+  matchesDiv.innerHTML = matches.map(m => `
+    <div class="card">
+      <h3>${m.name}</h3>
+      <p>${m.score} (${m.status})</p>
+
+      <button class="teamA" onclick="bet(${m.oddsA})">Team A (${m.oddsA})</button>
+      <button class="teamB" onclick="bet(${m.oddsB})">Team B (${m.oddsB})</button>
+    </div>
+  `).join("");
+}
+
+// BET
+async function bet(odds) {
+  if (!currentUser) return alert("Login first!");
+
+  let amount = prompt("Enter amount");
+  if (!amount) return;
+
+  let res = await fetch("/bet", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({amount, odds})
+  });
+
+  let data = await res.json();
+  alert(`Result: ${data.msg} | Balance: ₹${data.balance}`);
+
+  loadUser();
+}
+
+const matchesDiv = document.getElementById("matches");
+
+setInterval(loadMatches, 3001);
+loadMatches();
+loadUser();
+</script>
+
+</body>
+</html>
