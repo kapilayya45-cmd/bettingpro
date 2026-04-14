@@ -212,8 +212,9 @@ async function loadHistory(){
 }
 
 // AUTO REFRESH
-setInterval(loadMatches,2000);
-loadMatches();
+setInterval(()=>{
+ loadMatches();
+},2000);
 </script>
 
 </body>
