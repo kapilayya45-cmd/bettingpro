@@ -3,144 +3,95 @@
 <head>
 <meta name="viewport" content="width=device-width">
 <title>Pro Betting</title>
-<link rel="stylesheet" href="style.css">
+
+<style>
+body{background:#020617;color:white;text-align:center;font-family:sans-serif}
+.card{background:#1f2937;margin:10px;padding:10px;border-radius:10px}
+button{padding:10px;margin:5px;border:none;border-radius:8px}
+.betA{background:green}
+.betB{background:red}
+</style>
 </head>
 
 <body>
 
-<!-- TOP BAR -->
-<div class="topbar">
-  <div class="logo">🔥 PRO BET</div>
-  <div class="wallet" id="wallet">₹0</div>
-</div>
+<h2>🔥 PRO BET</h2>
 
-<!-- HOME -->
-<div id="home" class="page active">
-  <h3>Login</h3>
-  <input id="user" placeholder="Username">
-  <input id="pass" type="password" placeholder="Password"><br>
-  <button onclick="register()">Register</button>
-  <button onclick="login()">Login</button>
-  <div id="info"></div>
-</div>
+<input id="user" placeholder="Username">
+<input id="pass" type="password" placeholder="Password"><br>
+<button onclick="register()">Register</button>
+<button onclick="login()">Login</button>
 
-<!-- MATCHES -->
-<div id="matchesPage" class="page">
-  <h3>🎮 Live Matches</h3>
-  <div id="matches"></div>
-</div>
+<div id="info"></div>
 
-<!-- WALLET -->
-<div id="walletPage" class="page">
-  <h3>💰 Deposit</h3>
-  <input id="amount" placeholder="Amount">
-  <input id="utr" placeholder="UTR">
-  <button onclick="deposit()">Send</button>
-
-  <h3>💸 Withdraw</h3>
-  <input id="wamount" placeholder="Amount">
-  <input id="upi" placeholder="UPI">
-  <button onclick="withdraw()">Withdraw</button>
-</div>
-
-<!-- PROFILE -->
-<div id="profile" class="page">
-  <h3>📊 History</h3>
-  <div id="history"></div>
-</div>
-
-<!-- NAVIGATION -->
-<div class="nav">
-  <button onclick="showPage('home')">🏠</button>
-  <button onclick="showPage('matchesPage');loadMatches()">🎮</button>
-  <button onclick="showPage('walletPage');loadUser()">💰</button>
-  <button onclick="showPage('profile');loadHistory()">👤</button>
-</div>
+<h3>🎮 Matches</h3>
+<div id="matches"></div>
 
 <script>
-// PAGE SWITCH
-function showPage(p){
- document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));
- document.getElementById(p).classList.add("active");
+
+// 🔥 CHANGE THIS TO YOUR LIVE URL
+const BASE = "https://bettingpro-4ie8.onrender.com";
+
+// SAFE FETCH
+async function post(url,data){
+ try{
+  let r = await fetch(BASE+url,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(data)
+  });
+  return await r.json();
+ }catch(e){
+  alert("Server error");
+ }
 }
 
-// AUTH
+async function get(url){
+ try{
+  let r = await fetch(BASE+url);
+  return await r.json();
+ }catch{
+  return [];
+ }
+}
+
+// REGISTER
 async function register(){
- let r=await fetch("/register",{method:"POST",
- headers:{"Content-Type":"application/json"},
- body:JSON.stringify({username:user.value,password:pass.value})});
- alert((await r.json()).msg);
+ let d = await post("/register",{username:user.value,password:pass.value});
+ alert(d?.msg || "error");
 }
 
+// LOGIN
 async function login(){
- let r=await fetch("/login",{method:"POST",
- headers:{"Content-Type":"application/json"},
- body:JSON.stringify({username:user.value,password:pass.value})});
- alert((await r.json()).msg);
+ let d = await post("/login",{username:user.value,password:pass.value});
+ alert(d?.msg || "error");
  loadUser();
 }
 
 // USER
 async function loadUser(){
- let r=await fetch("/me");
- let d=await r.json();
- if(d.username){
-   info.innerHTML="👤 "+d.username;
-   wallet.innerText="₹"+d.wallet;
+ let d = await get("/me");
+ if(d?.username){
+  info.innerHTML = d.username+" ₹"+d.wallet;
  }
 }
 
 // MATCHES
 async function loadMatches(){
- let m=await fetch("/matches").then(r=>r.json());
+ let m = await get("/matches");
 
- matches.innerHTML=m.map(x=>`
+ matches.innerHTML = m.map(x=>`
   <div class="card">
    ${x.name}<br>${x.score}<br>
-
-   <button class="betA" onclick="bet(${x.oddsA})">A ${x.oddsA}</button>
-   <button class="betB" onclick="bet(${x.oddsB})">B ${x.oddsB}</button>
-  </div>`).join("");
+   <button class="betA">A ${x.oddsA}</button>
+   <button class="betB">B ${x.oddsB}</button>
+  </div>
+ `).join("");
 }
 
-// BET
-async function bet(o){
- let amt=prompt("Amount");
- let r=await fetch("/bet",{method:"POST",
- headers:{"Content-Type":"application/json"},
- body:JSON.stringify({amount:amt,odds:o})});
- alert((await r.json()).msg);
- loadUser();
-}
-
-// DEPOSIT
-async function deposit(){
- let r=await fetch("/deposit",{method:"POST",
- headers:{"Content-Type":"application/json"},
- body:JSON.stringify({amount:amount.value,utr:utr.value})});
- alert((await r.json()).msg);
-}
-
-// WITHDRAW
-async function withdraw(){
- let r=await fetch("/withdraw",{method:"POST",
- headers:{"Content-Type":"application/json"},
- body:JSON.stringify({amount:wamount.value,upi:upi.value})});
- alert((await r.json()).msg);
- loadUser();
-}
-
-// HISTORY
-async function loadHistory(){
- let h=await fetch("/history").then(r=>r.json());
- history.innerHTML=h.map(x=>`
-  <div class="card">
-   ₹${x.amount} - ${x.result}
-  </div>`).join("");
-}
-
-// AUTO LIVE REFRESH
 setInterval(loadMatches,2000);
+loadMatches();
+
 </script>
 
 </body>
