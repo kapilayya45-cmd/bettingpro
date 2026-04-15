@@ -3,74 +3,65 @@
 <head>
 <meta name="viewport" content="width=device-width">
 <title>Pro Betting</title>
+
+<style>
+body{
+ margin:0;
+ font-family:sans-serif;
+ background:#0b1220;
+ color:white;
+}
+
+/* TOP */
+.top{
+ display:flex;
+ justify-content:space-between;
+ padding:10px;
+ background:#020617;
+}
+
+.wallet{color:#facc15}
+
+/* MATCH ROW */
+.row{
+ display:flex;
+ justify-content:space-between;
+ padding:10px;
+ border-bottom:1px solid #1f2937;
+}
+
+.team{width:40%}
+.odds{width:20%;text-align:center}
+
+/* ODDS */
+.green{background:#16a34a;padding:8px;border-radius:5px}
+.red{background:#dc2626;padding:8px;border-radius:5px}
+
+</style>
 </head>
 
-<body style="background:#020617;color:white;text-align:center;font-family:sans-serif">
+<body>
 
-<h2>🔥 PRO BET</h2>
+<div class="top">
+ <div>🔥 PRO BET</div>
+ <div class="wallet" id="wallet">₹0</div>
+</div>
 
-<input id="user" placeholder="Username">
-<input id="pass" type="password" placeholder="Password"><br>
-<button onclick="register()">Register</button>
-<button onclick="login()">Login</button>
+<h3 style="text-align:center">LIVE MATCHES</h3>
 
-<div id="info"></div>
-
-<h3>💰 Deposit</h3>
-<input id="amount" placeholder="Amount">
-<button onclick="deposit()">Send</button>
-
-<h3>💸 Withdraw</h3>
-<input id="wamount" placeholder="Amount">
-<button onclick="withdraw()">Withdraw</button>
-
-<h3>🎮 Matches</h3>
 <div id="matches"></div>
 
 <script>
-async function post(url,data){
- let r = await fetch(url,{
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-  body:JSON.stringify(data)
- });
- return await r.json();
-}
-
-async function get(url){
- let r = await fetch(url);
- return await r.json();
-}
-
-async function register(){
- alert((await post("/register",{username:user.value,password:pass.value})).msg);
-}
-
-async function login(){
- alert((await post("/login",{username:user.value,password:pass.value})).msg);
- loadUser();
-}
-
-async function loadUser(){
- let d = await get("/me");
- if(d.username) info.innerHTML=d.username+" ₹"+d.wallet;
-}
-
 async function loadMatches(){
- let m = await get("/matches");
+ let m = await fetch("/matches").then(r=>r.json());
+
  matches.innerHTML = m.map(x=>`
-  <div>
-   ${x.name} ${x.score}<br>
-   A ${x.oddsA} | B ${x.oddsB}
-  </div>`).join("");
-}
-
-async function deposit(){
- alert((await post("/deposit",{amount:amount.value})).msg);
-}
-
-async function withdraw(){
- alert((await post("/withdraw",{amount:wamount.value})).msg);
+  <div class="row">
+   <div class="team">${x.name}<br>${x.score}</div>
+   <div class="odds green">${x.oddsA}</div>
+   <div class="odds red">${x.oddsB}</div>
+  </div>
+ `).join("");
 }
 
 setInterval(loadMatches,2000);
