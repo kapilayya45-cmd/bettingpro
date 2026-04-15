@@ -3,7 +3,27 @@ const cors = require("cors");
 const session = require("express-session");
 
 const app = express();
+const express = require("express");
+const cors = require("cors");
+const session = require("express-session");
+const path = require("path");
 
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+app.use(express.static(__dirname)); // 🔥 IMPORTANT
+
+app.use(session({
+  secret: "secret123",
+  resave: false,
+  saveUninitialized: true
+}));
+
+// ROOT
+app.get("/", (req,res)=>{
+ res.sendFile(path.join(__dirname,"index.html"));
+});
 app.use(cors());
 app.use(express.json());
 
