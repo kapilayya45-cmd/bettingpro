@@ -5,64 +5,19 @@
 <title>Pro Betting</title>
 
 <style>
-body{
- margin:0;
- font-family:sans-serif;
- background:#0b1220;
- color:white;
-}
+body{background:#0b1220;color:white;font-family:sans-serif;text-align:center}
+.row{display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #333}
+.odds{padding:8px;border-radius:5px;cursor:pointer}
+.green{background:green}
+.red{background:red}
 
-/* TOP */
-.top{
- display:flex;
- justify-content:space-between;
- padding:10px;
- background:#020617;
-}
-
-.wallet{color:#facc15}
-
-/* MATCH */
-.row{
- display:flex;
- justify-content:space-between;
- padding:10px;
- border-bottom:1px solid #1f2937;
-}
-
-.odds{
- padding:8px;
- border-radius:5px;
- cursor:pointer;
-}
-
-.green{background:#16a34a}
-.red{background:#dc2626}
-
-/* BET SLIP */
 #betslip{
  position:fixed;
  bottom:0;
  width:100%;
- background:#020617;
- padding:15px;
+ background:black;
+ padding:10px;
  display:none;
- border-top:2px solid #1f2937;
-}
-
-#betslip input{
- width:80%;
- padding:10px;
- margin:5px;
- border-radius:8px;
- border:none;
-}
-
-button{
- padding:10px;
- border:none;
- border-radius:8px;
- margin:5px;
 }
 </style>
 
@@ -70,86 +25,84 @@ button{
 
 <body>
 
-<div class="top">
- <div>🔥 PRO BET</div>
- <div class="wallet" id="wallet">₹0</div>
-</div>
+<h2>🔥 PRO BET</h2>
 
-<h3 style="text-align:center">LIVE MATCHES</h3>
+<input id="user" placeholder="Username">
+<input id="pass" type="password" placeholder="Password"><br>
+<button onclick="register()">Register</button>
+<button onclick="login()">Login</button>
+
+<div id="info"></div>
+
+<h3>LIVE MATCHES</h3>
 <div id="matches"></div>
 
-<!-- BET SLIP -->
 <div id="betslip">
  <div id="betInfo"></div>
- <input id="betAmount" placeholder="Enter amount">
- <button onclick="placeBet()">Confirm Bet</button>
- <button onclick="closeSlip()">Cancel</button>
+ <input id="amt" placeholder="Amount">
+ <button onclick="bet()">Confirm</button>
 </div>
 
 <script>
+let selOdds,selMatch;
 
-let selectedOdds = 0;
-let selectedMatch = "";
+async function post(url,data){
+ let r = await fetch(url,{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify(data),
+  credentials:"include" // 🔥 IMPORTANT
+ });
+ return await r.json();
+}
 
-// LOAD MATCHES
+async function get(url){
+ let r = await fetch(url,{credentials:"include"});
+ return await r.json();
+}
+
+async function register(){
+ alert((await post("/register",{username:user.value,password:pass.value})).msg);
+}
+
+async function login(){
+ alert((await post("/login",{username:user.value,password:pass.value})).msg);
+ loadUser();
+}
+
+async function loadUser(){
+ let d = await get("/me");
+ if(d.username) info.innerHTML = d.username+" ₹"+d.wallet;
+}
+
 async function loadMatches(){
- let m = await fetch("/matches").then(r=>r.json());
+ let m = await get("/matches");
 
  matches.innerHTML = m.map(x=>`
   <div class="row">
-   <div>${x.name}<br>${x.score}</div>
-   <div class="odds green" onclick="openSlip('${x.name}',${x.oddsA})">
-     ${x.oddsA}
-   </div>
-   <div class="odds red" onclick="openSlip('${x.name}',${x.oddsB})">
-     ${x.oddsB}
-   </div>
+   <div>${x.name}</div>
+   <div class="odds green" onclick="openBet('${x.name}',${x.oddsA})">${x.oddsA}</div>
+   <div class="odds red" onclick="openBet('${x.name}',${x.oddsB})">${x.oddsB}</div>
   </div>
  `).join("");
 }
 
-// OPEN BET SLIP
-function openSlip(match,odds){
- selectedMatch = match;
- selectedOdds = odds;
-
- betInfo.innerHTML = `
-  ${match}<br>
-  Odds: ${odds}
- `;
-
- document.getElementById("betslip").style.display="block";
+function openBet(match,odds){
+ selMatch=match;
+ selOdds=odds;
+ betslip.style.display="block";
+ betInfo.innerHTML=match+" @ "+odds;
 }
 
-// CLOSE
-function closeSlip(){
- document.getElementById("betslip").style.display="none";
+async function bet(){
+ let r = await post("/bet",{match:selMatch,odds:selOdds,amount:amt.value});
+ alert(r.msg);
+ betslip.style.display="none";
+ loadUser();
 }
 
-// PLACE BET
-async function placeBet(){
- let amt = document.getElementById("betAmount").value;
-
- let r = await fetch("/bet",{
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-  body:JSON.stringify({
-    match:selectedMatch,
-    odds:selectedOdds,
-    amount:amt
-  })
- });
-
- let d = await r.json();
- alert(d.msg);
-
- closeSlip();
-}
-
-// AUTO REFRESH
 setInterval(loadMatches,2000);
 loadMatches();
-
 </script>
 
 </body>
