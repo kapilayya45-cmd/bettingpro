@@ -2,133 +2,53 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width">
-<title>Admin Panel</title>
-
-<style>
-body{
-  background:#020617;
-  color:white;
-  font-family:sans-serif;
-  text-align:center;
-}
-
-.card{
-  background:#1f2937;
-  margin:10px;
-  padding:10px;
-  border-radius:10px;
-}
-
-button{
-  padding:8px;
-  margin:5px;
-  border:none;
-  border-radius:5px;
-  color:white;
-}
-
-.approve{background:green}
-.reject{background:red}
-</style>
+<title>Admin</title>
 </head>
 
-<body>
+<body style="background:#020617;color:white;text-align:center">
 
-<h2>👑 ADMIN PANEL</h2>
+<h2>ADMIN</h2>
 
-<!-- LOGIN BOX -->
-<div id="loginBox">
-  <input id="user" placeholder="Admin Username">
-  <input id="pass" type="password" placeholder="Password"><br>
-  <button onclick="login()">Login</button>
-</div>
+<input id="user" placeholder="username">
+<input id="pass" type="password" placeholder="password"><br>
+<button onclick="login()">Login</button>
 
-<!-- PANEL -->
-<div id="panel" style="display:none">
-
-  <h3>💰 Deposits</h3>
-  <div id="deposits"></div>
-
-  <h3>💸 Withdraws</h3>
-  <div id="withdraws"></div>
-
-</div>
+<div id="panel" style="display:none"></div>
 
 <script>
 
+const BASE = "https://bettingpro-4ie8.onrender.com";
+
+// SAFE FETCH
+async function post(url,data){
+ try{
+  let r = await fetch(BASE+url,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(data)
+  });
+  return await r.json();
+ }catch{
+  alert("server error");
+ }
+}
+
 // LOGIN
 async function login(){
- let r = await fetch("/admin/login",{
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-  body:JSON.stringify({username:user.value,password:pass.value})
- });
+ let d = await post("/admin/login",{username:user.value,password:pass.value});
 
- let d = await r.json();
- alert(d.msg);
+ alert(d?.msg);
 
- if(d.msg.includes("success")){
-   document.getElementById("loginBox").style.display="none";
-   document.getElementById("panel").style.display="block";
-   loadData(); // 🔥 IMPORTANT
+ if(d?.msg && d.msg.includes("success")){
+  panel.style.display="block";
+  load();
  }
 }
 
 // LOAD DATA
-async function loadData(){
-
- // DEPOSITS
- let d = await fetch("/admin/deposits").then(r=>r.json());
-
- deposits.innerHTML = d.map(x=>`
-  <div class="card">
-    ${x.username} ₹${x.amount} (${x.status})
-    <br>
-    <button class="approve" onclick="approve('${x._id}')">Approve</button>
-  </div>
- `).join("");
-
- // WITHDRAWS
- let w = await fetch("/admin/withdraws").then(r=>r.json());
-
- withdraws.innerHTML = w.map(x=>`
-  <div class="card">
-    ${x.username} ₹${x.amount} (${x.status})
-    <br>
-    <button class="approve" onclick="wapprove('${x._id}')">Approve</button>
-    <button class="reject" onclick="wreject('${x._id}')">Reject</button>
-  </div>
- `).join("");
-}
-
-// APPROVE DEPOSIT
-async function approve(id){
- await fetch("/admin/approve",{
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-  body:JSON.stringify({id})
- });
- loadData();
-}
-
-// APPROVE WITHDRAW
-async function wapprove(id){
- await fetch("/admin/withdraw-approve",{
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-  body:JSON.stringify({id})
- });
- loadData();
-}
-
-// REJECT WITHDRAW
-async function wreject(id){
- await fetch("/admin/withdraw-reject",{
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-  body:JSON.stringify({id})
- });
- loadData();
+async function load(){
+ let d = await fetch(BASE+"/admin/deposits").then(r=>r.json());
+ panel.innerHTML = JSON.stringify(d);
 }
 
 </script>
