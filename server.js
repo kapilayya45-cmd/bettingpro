@@ -183,3 +183,83 @@ app.post("/withdraw", async (req,res)=>{
 app.listen(process.env.PORT || 3001, "0.0.0.0", ()=>{
   console.log("Server running");
 });
+// 🔐 SIMPLE ADMIN LOGIN (hardcoded)
+const ADMIN_USER = "admin";
+const ADMIN_PASS = "123";
+
+// ADMIN LOGIN
+app.post("/admin/login",(req,res)=>{
+ let {username,password} = req.body;
+
+ if(username===ADMIN_USER && password===ADMIN_PASS){
+   req.session.admin = true;
+   return res.json({msg:"Admin login success"});
+ }
+
+ res.json({msg:"Invalid"});
+});
+
+// CHECK ADMIN
+app.get("/admin/me",(req,res)=>{
+ if(req.session.admin) return res.json({ok:true});
+ res.json({ok:false});
+});
+
+// GET DEPOSITS
+app.get("/admin/deposits", async (req,res)=>{
+ if(!req.session.admin) return res.json([]);
+
+ let data = await Deposit.find().sort({_id:-1});
+ res.json(data);
+});
+
+// APPROVE DEPOSIT
+app.post("/admin/approve", async (req,res)=>{
+ if(!req.session.admin) return res.json({msg:"No access"});
+
+ let d = await Deposit.findById(req.body.id);
+ let user = await User.findOne({username:d.username});
+
+ user.wallet += d.amount;
+ d.status="approved";
+
+ await user.save();
+ await d.save();
+
+ res.json({msg:"Approved"});
+});
+
+// GET WITHDRAWS
+app.get("/admin/withdraws", async (req,res)=>{
+ if(!req.session.admin) return res.json([]);
+
+ let data = await Withdraw.find().sort({_id:-1});
+ res.json(data);
+});
+
+// APPROVE WITHDRAW
+app.post("/admin/withdraw-approve", async (req,res)=>{
+ if(!req.session.admin) return res.json({msg:"No access"});
+
+ let w = await Withdraw.findById(req.body.id);
+ w.status="approved";
+
+ await w.save();
+ res.json({msg:"Approved"});
+});
+
+// REJECT WITHDRAW
+app.post("/admin/withdraw-reject", async (req,res)=>{
+ if(!req.session.admin) return res.json({msg:"No access"});
+
+ let w = await Withdraw.findById(req.body.id);
+ let user = await User.findOne({username:w.username});
+
+ user.wallet += w.amount;
+ w.status="rejected";
+
+ await user.save();
+ await w.save();
+
+ res.json({msg:"Rejected"});
+});
