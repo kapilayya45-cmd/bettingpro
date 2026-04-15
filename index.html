@@ -5,53 +5,169 @@
 <title>Pro Betting</title>
 
 <style>
-body{background:#0b1220;color:white;font-family:sans-serif;text-align:center}
-.row{display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #333}
-.odds{padding:8px;border-radius:5px;cursor:pointer}
-.green{background:green}
-.red{background:red}
+body{
+ margin:0;
+ font-family:Arial;
+ background:#0b1220;
+ color:white;
+}
 
+/* TOP BAR */
+.topbar{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ padding:12px;
+ background:#020617;
+ border-bottom:1px solid #1f2937;
+}
+
+.logo{
+ font-size:18px;
+ font-weight:bold;
+}
+
+.wallet{
+ color:#facc15;
+}
+
+/* LOGIN */
+.login{
+ padding:10px;
+ text-align:center;
+}
+
+.login input{
+ padding:8px;
+ margin:5px;
+ border-radius:6px;
+ border:none;
+}
+
+.login button{
+ padding:8px 12px;
+ margin:5px;
+ border:none;
+ border-radius:6px;
+ background:#2563eb;
+ color:white;
+ cursor:pointer;
+}
+
+/* MATCH TABLE */
+.table{
+ margin-top:10px;
+}
+
+.row{
+ display:flex;
+ justify-content:space-between;
+ padding:12px;
+ border-bottom:1px solid #1f2937;
+ align-items:center;
+}
+
+.row:hover{
+ background:#111827;
+}
+
+.team{
+ width:50%;
+}
+
+.odds{
+ width:20%;
+ text-align:center;
+ padding:10px;
+ border-radius:6px;
+ cursor:pointer;
+ transition:0.2s;
+}
+
+.green{
+ background:#16a34a;
+}
+
+.red{
+ background:#dc2626;
+}
+
+.odds:hover{
+ transform:scale(1.05);
+}
+
+/* BET SLIP (RIGHT SIDE) */
 #betslip{
  position:fixed;
- bottom:0;
- width:100%;
- background:black;
- padding:10px;
+ right:0;
+ top:0;
+ width:300px;
+ height:100%;
+ background:#020617;
+ border-left:1px solid #1f2937;
+ padding:15px;
  display:none;
 }
-</style>
 
+#betslip input{
+ width:90%;
+ padding:10px;
+ margin:10px 0;
+ border:none;
+ border-radius:6px;
+}
+
+#betslip button{
+ width:100%;
+ padding:10px;
+ margin:5px 0;
+ border:none;
+ border-radius:6px;
+ cursor:pointer;
+}
+
+</style>
 </head>
 
 <body>
 
-<h2>🔥 PRO BET</h2>
+<!-- TOP -->
+<div class="topbar">
+ <div class="logo">🔥 PRO BET</div>
+ <div class="wallet" id="wallet">₹0</div>
+</div>
 
-<input id="user" placeholder="Username">
-<input id="pass" type="password" placeholder="Password"><br>
-<button onclick="register()">Register</button>
-<button onclick="login()">Login</button>
+<!-- LOGIN -->
+<div class="login">
+ <input id="user" placeholder="Username">
+ <input id="pass" type="password" placeholder="Password"><br>
+ <button onclick="register()">Register</button>
+ <button onclick="login()">Login</button>
+</div>
 
-<div id="info"></div>
+<!-- MATCHES -->
+<div class="table" id="matches"></div>
 
-<h3>LIVE MATCHES</h3>
-<div id="matches"></div>
-
+<!-- BET SLIP -->
 <div id="betslip">
+ <h3>Bet Slip</h3>
  <div id="betInfo"></div>
- <input id="amt" placeholder="Amount">
- <button onclick="bet()">Confirm</button>
+ <input id="amt" placeholder="Enter Amount">
+ <button onclick="placeBet()">Place Bet</button>
+ <button onclick="closeSlip()">Close</button>
 </div>
 
 <script>
-let selOdds,selMatch;
 
+let selMatch,selOdds;
+
+// API HELPERS
 async function post(url,data){
  let r = await fetch(url,{
   method:"POST",
   headers:{"Content-Type":"application/json"},
   body:JSON.stringify(data),
-  credentials:"include" // 🔥 IMPORTANT
+  credentials:"include"
  });
  return await r.json();
 }
@@ -61,6 +177,7 @@ async function get(url){
  return await r.json();
 }
 
+// AUTH
 async function register(){
  alert((await post("/register",{username:user.value,password:pass.value})).msg);
 }
@@ -70,39 +187,67 @@ async function login(){
  loadUser();
 }
 
+// USER
 async function loadUser(){
  let d = await get("/me");
- if(d.username) info.innerHTML = d.username+" ₹"+d.wallet;
+ if(d.username){
+  wallet.innerHTML = "₹"+d.wallet;
+ }
 }
 
+// MATCHES
 async function loadMatches(){
  let m = await get("/matches");
 
  matches.innerHTML = m.map(x=>`
   <div class="row">
-   <div>${x.name}</div>
-   <div class="odds green" onclick="openBet('${x.name}',${x.oddsA})">${x.oddsA}</div>
-   <div class="odds red" onclick="openBet('${x.name}',${x.oddsB})">${x.oddsB}</div>
+   <div class="team">${x.name}<br>${x.score}</div>
+
+   <div class="odds green" onclick="openSlip('${x.name}',${x.oddsA})">
+    ${x.oddsA}
+   </div>
+
+   <div class="odds red" onclick="openSlip('${x.name}',${x.oddsB})">
+    ${x.oddsB}
+   </div>
   </div>
  `).join("");
 }
 
-function openBet(match,odds){
- selMatch=match;
- selOdds=odds;
- betslip.style.display="block";
- betInfo.innerHTML=match+" @ "+odds;
+// BET SLIP
+function openSlip(match,odds){
+ selMatch = match;
+ selOdds = odds;
+
+ betInfo.innerHTML = `
+  <b>${match}</b><br>
+  Odds: ${odds}
+ `;
+
+ betslip.style.display = "block";
 }
 
-async function bet(){
- let r = await post("/bet",{match:selMatch,odds:selOdds,amount:amt.value});
+function closeSlip(){
+ betslip.style.display = "none";
+}
+
+// PLACE BET
+async function placeBet(){
+ let r = await post("/bet",{
+  match:selMatch,
+  odds:selOdds,
+  amount:amt.value
+ });
+
  alert(r.msg);
- betslip.style.display="none";
+ closeSlip();
  loadUser();
 }
 
+// AUTO LOAD
 setInterval(loadMatches,2000);
 loadMatches();
+
 </script>
 
 </body>
