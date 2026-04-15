@@ -22,71 +22,6 @@ body{
 
 .wallet{color:#facc15}
 
-/* MATCH ROW */
-.row{
- display:flex;
- justify-content:space-between;
- padding:10px;
- border-bottom:1px solid #1f2937;
-}
-
-.team{width:40%}
-.odds{width:20%;text-align:center}
-
-/* ODDS */
-.green{background:#16a34a;padding:8px;border-radius:5px}
-.red{background:#dc2626;padding:8px;border-radius:5px}
-
-</style>
-</head>
-
-<body>
-
-<div class="top">
- <div>🔥 PRO BET</div>
- <div class="wallet" id="wallet">₹0</div>
-</div>
-
-<h3 style="text-align:center">LIVE MATCHES</h3>
-
-<div id="matches"></div>
-
-<script>
-async function loadMatches(){
- let m = await fetch("/matches").then(r=>r.json());
-
- matches.innerHTML = m.map(x=>`
-  <div class="row">
-   <div class="team">${x.name}<br>${x.score}</div>
-   <div class="odds green">${x.oddsA}</div>
-   <div class="odds red">${x.oddsB}</div>
-  </div>
- `).join("");
-}
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width">
-<title>Pro Betting</title>
-
-<style>
-body{
- margin:0;
- font-family:sans-serif;
- background:#0b1220;
- color:white;
-}
-
-/* TOP */
-.top{
- display:flex;
- justify-content:space-between;
- padding:10px;
- background:#020617;
-}
-
-.wallet{color:#facc15}
-
 /* MATCH */
 .row{
  display:flex;
@@ -215,12 +150,6 @@ async function placeBet(){
 setInterval(loadMatches,2000);
 loadMatches();
 
-</script>
-
-</body>
-</html>
-setInterval(loadMatches,2000);
-loadMatches();
 </script>
 
 </body>
