@@ -63,7 +63,162 @@ async function loadMatches(){
   </div>
  `).join("");
 }
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width">
+<title>Pro Betting</title>
 
+<style>
+body{
+ margin:0;
+ font-family:sans-serif;
+ background:#0b1220;
+ color:white;
+}
+
+/* TOP */
+.top{
+ display:flex;
+ justify-content:space-between;
+ padding:10px;
+ background:#020617;
+}
+
+.wallet{color:#facc15}
+
+/* MATCH */
+.row{
+ display:flex;
+ justify-content:space-between;
+ padding:10px;
+ border-bottom:1px solid #1f2937;
+}
+
+.odds{
+ padding:8px;
+ border-radius:5px;
+ cursor:pointer;
+}
+
+.green{background:#16a34a}
+.red{background:#dc2626}
+
+/* BET SLIP */
+#betslip{
+ position:fixed;
+ bottom:0;
+ width:100%;
+ background:#020617;
+ padding:15px;
+ display:none;
+ border-top:2px solid #1f2937;
+}
+
+#betslip input{
+ width:80%;
+ padding:10px;
+ margin:5px;
+ border-radius:8px;
+ border:none;
+}
+
+button{
+ padding:10px;
+ border:none;
+ border-radius:8px;
+ margin:5px;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="top">
+ <div>🔥 PRO BET</div>
+ <div class="wallet" id="wallet">₹0</div>
+</div>
+
+<h3 style="text-align:center">LIVE MATCHES</h3>
+<div id="matches"></div>
+
+<!-- BET SLIP -->
+<div id="betslip">
+ <div id="betInfo"></div>
+ <input id="betAmount" placeholder="Enter amount">
+ <button onclick="placeBet()">Confirm Bet</button>
+ <button onclick="closeSlip()">Cancel</button>
+</div>
+
+<script>
+
+let selectedOdds = 0;
+let selectedMatch = "";
+
+// LOAD MATCHES
+async function loadMatches(){
+ let m = await fetch("/matches").then(r=>r.json());
+
+ matches.innerHTML = m.map(x=>`
+  <div class="row">
+   <div>${x.name}<br>${x.score}</div>
+   <div class="odds green" onclick="openSlip('${x.name}',${x.oddsA})">
+     ${x.oddsA}
+   </div>
+   <div class="odds red" onclick="openSlip('${x.name}',${x.oddsB})">
+     ${x.oddsB}
+   </div>
+  </div>
+ `).join("");
+}
+
+// OPEN BET SLIP
+function openSlip(match,odds){
+ selectedMatch = match;
+ selectedOdds = odds;
+
+ betInfo.innerHTML = `
+  ${match}<br>
+  Odds: ${odds}
+ `;
+
+ document.getElementById("betslip").style.display="block";
+}
+
+// CLOSE
+function closeSlip(){
+ document.getElementById("betslip").style.display="none";
+}
+
+// PLACE BET
+async function placeBet(){
+ let amt = document.getElementById("betAmount").value;
+
+ let r = await fetch("/bet",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({
+    match:selectedMatch,
+    odds:selectedOdds,
+    amount:amt
+  })
+ });
+
+ let d = await r.json();
+ alert(d.msg);
+
+ closeSlip();
+}
+
+// AUTO REFRESH
+setInterval(loadMatches,2000);
+loadMatches();
+
+</script>
+
+</body>
+</html>
 setInterval(loadMatches,2000);
 loadMatches();
 </script>
