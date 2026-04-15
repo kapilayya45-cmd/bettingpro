@@ -6,6 +6,7 @@ const path = require("path");
 
 const app = express();
 
+// MIDDLEWARE
 app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
@@ -16,10 +17,10 @@ app.use(session({
   saveUninitialized: true
 }));
 
-// 🔗 MONGODB CONNECT
-mongoose.connect("mongodb+srv://admin:password@cluster0.xxxx.mongodb.net/betting")
-.then(()=>console.log("MongoDB Connected"))
-.catch(err=>console.log(err));
+// 🔥 MONGODB CONNECT (CHANGE PASSWORD HERE)
+mongoose.connect("mongodb+srv://admin:YOUR_PASSWORD@cluster0.ui0ovpg.mongodb.net/betting?retryWrites=true&w=majority")
+.then(()=>console.log("✅ MongoDB Connected"))
+.catch(err=>console.log("❌ DB Error:",err));
 
 // ================= SCHEMA =================
 
@@ -58,24 +59,32 @@ app.get("/",(req,res)=>{
 
 // REGISTER
 app.post("/register",async(req,res)=>{
- let {username,password} = req.body;
+ try{
+  let {username,password} = req.body;
 
- let exists = await User.findOne({username});
- if(exists) return res.json({msg:"User exists"});
+  let exists = await User.findOne({username});
+  if(exists) return res.json({msg:"User exists"});
 
- await User.create({username,password});
- res.json({msg:"Registered"});
+  await User.create({username,password});
+  res.json({msg:"Registered"});
+ }catch(e){
+  res.json({msg:"Error"});
+ }
 });
 
 // LOGIN
 app.post("/login",async(req,res)=>{
- let {username,password} = req.body;
+ try{
+  let {username,password} = req.body;
 
- let user = await User.findOne({username,password});
- if(!user) return res.json({msg:"Invalid"});
+  let user = await User.findOne({username,password});
+  if(!user) return res.json({msg:"Invalid"});
 
- req.session.user = user;
- res.json({msg:"Login success"});
+  req.session.user = user;
+  res.json({msg:"Login success"});
+ }catch{
+  res.json({msg:"Server error"});
+ }
 });
 
 // USER
@@ -88,46 +97,51 @@ app.get("/me",(req,res)=>{
 app.get("/matches",(req,res)=>{
  res.json([
   {name:"IND vs AUS",score:"120/3",oddsA:(1.5+Math.random()).toFixed(2),oddsB:(1.5+Math.random()).toFixed(2)},
-  {name:"CSK vs MI",score:"90/2",oddsA:(1.5+Math.random()).toFixed(2),oddsB:(1.5+Math.random()).toFixed(2)}
+  {name:"CSK vs MI",score:"90/2",oddsA:(1.5+Math.random()).toFixed(2),oddsB:(1.5+Math.random()).toFixed(2)},
+  {name:"RCB vs KKR",score:"150/5",oddsA:(1.5+Math.random()).toFixed(2),oddsB:(1.5+Math.random()).toFixed(2)}
  ]);
 });
 
 // BET
 app.post("/bet",async(req,res)=>{
- if(!req.session.user) return res.json({msg:"Login required"});
+ try{
+  if(!req.session.user) return res.json({msg:"Login required"});
 
- let {amount,odds,match} = req.body;
- amount = Number(amount);
+  let {amount,odds,match} = req.body;
+  amount = Number(amount);
 
- let user = await User.findOne({username:req.session.user.username});
+  let user = await User.findOne({username:req.session.user.username});
 
- if(user.wallet < amount){
-  return res.json({msg:"Insufficient balance"});
+  if(user.wallet < amount){
+    return res.json({msg:"Insufficient balance"});
+  }
+
+  user.wallet -= amount;
+
+  let result;
+
+  if(Math.random()>0.5){
+    let win = amount * odds;
+    user.wallet += win;
+    result="WIN";
+  }else{
+    result="LOSE";
+  }
+
+  await user.save();
+
+  await Bet.create({
+    username:user.username,
+    match,
+    amount,
+    odds,
+    result
+  });
+
+  res.json({msg:result});
+ }catch{
+  res.json({msg:"Bet error"});
  }
-
- user.wallet -= amount;
-
- let result;
-
- if(Math.random()>0.5){
-  let win = amount * odds;
-  user.wallet += win;
-  result="WIN";
- }else{
-  result="LOSE";
- }
-
- await user.save();
-
- await Bet.create({
-  username:user.username,
-  match,
-  amount,
-  odds,
-  result
- });
-
- res.json({msg:result});
 });
 
 // HISTORY
@@ -140,38 +154,46 @@ app.get("/history",async(req,res)=>{
 
 // DEPOSIT
 app.post("/deposit",async(req,res)=>{
- if(!req.session.user) return res.json({msg:"Login required"});
+ try{
+  if(!req.session.user) return res.json({msg:"Login required"});
 
- await Deposit.create({
-  username:req.session.user.username,
-  amount:req.body.amount,
-  status:"pending"
- });
+  await Deposit.create({
+    username:req.session.user.username,
+    amount:Number(req.body.amount),
+    status:"pending"
+  });
 
- res.json({msg:"Deposit sent"});
+  res.json({msg:"Deposit sent"});
+ }catch{
+  res.json({msg:"Error"});
+ }
 });
 
 // WITHDRAW
 app.post("/withdraw",async(req,res)=>{
- if(!req.session.user) return res.json({msg:"Login required"});
+ try{
+  if(!req.session.user) return res.json({msg:"Login required"});
 
- let user = await User.findOne({username:req.session.user.username});
- let amt = Number(req.body.amount);
+  let user = await User.findOne({username:req.session.user.username});
+  let amt = Number(req.body.amount);
 
- if(user.wallet < amt){
-  return res.json({msg:"Insufficient"});
+  if(user.wallet < amt){
+    return res.json({msg:"Insufficient"});
+  }
+
+  user.wallet -= amt;
+  await user.save();
+
+  await Withdraw.create({
+    username:user.username,
+    amount:amt,
+    status:"pending"
+  });
+
+  res.json({msg:"Withdraw sent"});
+ }catch{
+  res.json({msg:"Error"});
  }
-
- user.wallet -= amt;
- await user.save();
-
- await Withdraw.create({
-  username:user.username,
-  amount:amt,
-  status:"pending"
- });
-
- res.json({msg:"Withdraw sent"});
 });
 
 // ================= ADMIN =================
