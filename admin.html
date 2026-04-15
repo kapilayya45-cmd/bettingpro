@@ -2,131 +2,79 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width">
-<title>Pro Betting</title>
+<title>Admin Panel</title>
 
-<link rel="stylesheet" href="style.css">
+<style>
+body{background:#020617;color:white;font-family:sans-serif;text-align:center}
+.card{background:#1f2937;margin:10px;padding:10px;border-radius:10px}
+button{padding:8px;margin:5px;border:none;border-radius:5px}
+.approve{background:green}
+.reject{background:red}
+</style>
 </head>
 
 <body>
 
-<!-- TOP BAR -->
-<div class="topbar">
-  <div class="logo">🔥 PRO BET</div>
-  <div class="wallet" id="wallet">₹0</div>
-</div>
+<h2>👑 ADMIN PANEL</h2>
 
-<!-- LOGIN -->
-<input id="user" placeholder="Username">
+<input id="user" placeholder="Admin Username">
 <input id="pass" type="password" placeholder="Password"><br>
-<button onclick="register()">Register</button>
 <button onclick="login()">Login</button>
 
-<div id="info"></div>
+<h3>💰 Deposits</h3>
+<div id="deposits"></div>
 
-<!-- DEPOSIT -->
-<h3>💰 Deposit</h3>
-<input id="amount" placeholder="Amount">
-<input id="utr" placeholder="UTR">
-<button onclick="deposit()">Send</button>
-
-<!-- WITHDRAW -->
-<h3>💸 Withdraw</h3>
-<input id="wamount" placeholder="Amount">
-<input id="upi" placeholder="UPI">
-<button onclick="withdraw()">Withdraw</button>
-
-<!-- MATCHES -->
-<h3>🎮 Matches</h3>
-<div id="matches"></div>
-
-<!-- HISTORY -->
-<h3>📊 History</h3>
-<div id="history"></div>
-
-<!-- NAV -->
-<div class="nav">
-  <button onclick="loadMatches()">🏠</button>
-  <button onclick="loadMatches()">🎮</button>
-  <button onclick="loadUser()">💰</button>
-  <button>👤</button>
-</div>
+<h3>💸 Withdraws</h3>
+<div id="withdraws"></div>
 
 <script>
-async function register(){
- let r=await fetch("/register",{method:"POST",
- headers:{"Content-Type":"application/json"},
- body:JSON.stringify({username:user.value,password:pass.value})});
- alert((await r.json()).msg);
-}
-
 async function login(){
- let r=await fetch("/login",{method:"POST",
+ let r=await fetch("/admin/login",{method:"POST",
  headers:{"Content-Type":"application/json"},
  body:JSON.stringify({username:user.value,password:pass.value})});
  alert((await r.json()).msg);
- loadUser(); loadHistory();
+ loadData();
 }
 
-async function loadUser(){
- let r=await fetch("/me");
- let d=await r.json();
- if(d.username){
-   info.innerHTML=`👤 ${d.username}`;
-   wallet.innerText="₹"+d.wallet;
- }
-}
+async function loadData(){
+ let d=await fetch("/admin/deposits").then(r=>r.json());
 
-async function loadMatches(){
- let m=await fetch("/matches").then(r=>r.json());
-
- matches.innerHTML=m.map(x=>`
+ deposits.innerHTML=d.map(x=>`
   <div class="card">
-   <b>${x.name}</b><br>${x.score}<br>
+   ${x.username} ₹${x.amount}
+   <button class="approve" onclick="approve('${x._id}')">Approve</button>
+  </div>`).join("");
 
-   <button class="betA" onclick="bet(${x.oddsA})">
-    A ${x.oddsA}
-   </button>
+ let w=await fetch("/admin/withdraws").then(r=>r.json());
 
-   <button class="betB" onclick="bet(${x.oddsB})">
-    B ${x.oddsB}
-   </button>
+ withdraws.innerHTML=w.map(x=>`
+  <div class="card">
+   ${x.username} ₹${x.amount}
+   <button class="approve" onclick="wapprove('${x._id}')">Approve</button>
+   <button class="reject" onclick="wreject('${x._id}')">Reject</button>
   </div>`).join("");
 }
 
-async function bet(o){
- let amt=prompt("Amount");
- let r=await fetch("/bet",{method:"POST",
+async function approve(id){
+ await fetch("/admin/approve",{method:"POST",
  headers:{"Content-Type":"application/json"},
- body:JSON.stringify({amount:amt,odds:o})});
- alert((await r.json()).msg);
- loadUser(); loadHistory();
+ body:JSON.stringify({id})});
+ loadData();
 }
 
-async function deposit(){
- let r=await fetch("/deposit",{method:"POST",
+async function wapprove(id){
+ await fetch("/admin/withdraw-approve",{method:"POST",
  headers:{"Content-Type":"application/json"},
- body:JSON.stringify({amount:amount.value,utr:utr.value})});
- alert((await r.json()).msg);
+ body:JSON.stringify({id})});
+ loadData();
 }
 
-async function withdraw(){
- let r=await fetch("/withdraw",{method:"POST",
+async function wreject(id){
+ await fetch("/admin/withdraw-reject",{method:"POST",
  headers:{"Content-Type":"application/json"},
- body:JSON.stringify({amount:wamount.value,upi:upi.value})});
- alert((await r.json()).msg);
+ body:JSON.stringify({id})});
+ loadData();
 }
-
-async function loadHistory(){
- let h=await fetch("/history").then(r=>r.json());
- history.innerHTML=h.map(x=>`
-  <div class="card">
-   ₹${x.amount} 
-   <span class="${x.result=='WIN'?'win':'lose'}">${x.result}</span>
-  </div>`).join("");
-}
-
-setInterval(loadMatches,2000);
-loadMatches();
 </script>
 
 </body>
