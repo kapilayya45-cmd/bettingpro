@@ -1,35 +1,32 @@
 body{
   margin:0;
   font-family:sans-serif;
-  background:linear-gradient(180deg,#0b1220,#020617);
+  background:#020617;
   color:white;
 }
 
 /* TOP BAR */
 .topbar{
-  display:flex;
-  justify-content:space-between;
   padding:15px;
   background:#020617;
+  display:flex;
+  justify-content:space-between;
   border-bottom:1px solid #1f2937;
 }
 
-.logo{
-  color:#22c55e;
-  font-weight:bold;
-}
+.logo{color:#22c55e;font-weight:bold;}
+.wallet{color:#facc15;}
 
-.wallet{
-  color:#facc15;
-}
+/* PAGES */
+.page{display:none;padding-bottom:70px;}
+.active{display:block;}
 
-/* INPUT */
-input{
-  padding:10px;
-  margin:5px;
-  border-radius:8px;
-  border:none;
-  width:40%;
+/* CARD */
+.card{
+  background:#1f2937;
+  margin:10px;
+  padding:15px;
+  border-radius:15px;
 }
 
 /* BUTTON */
@@ -39,26 +36,21 @@ button{
   border:none;
   border-radius:10px;
   color:white;
-  cursor:pointer;
 }
 
 .betA{background:#16a34a;}
 .betB{background:#dc2626;}
 
-/* CARD */
-.card{
-  background:linear-gradient(145deg,#1f2937,#020617);
-  margin:12px;
-  padding:15px;
-  border-radius:15px;
-  box-shadow:0 0 10px rgba(0,0,0,0.6);
+/* INPUT */
+input{
+  padding:10px;
+  margin:5px;
+  width:80%;
+  border-radius:8px;
+  border:none;
 }
 
-/* HISTORY */
-.win{color:#22c55e;}
-.lose{color:#ef4444;}
-
-/* NAV BAR */
+/* NAV */
 .nav{
   position:fixed;
   bottom:0;
@@ -66,5 +58,11 @@ button{
   display:flex;
   justify-content:space-around;
   background:#020617;
-  padding:10px;
+  border-top:1px solid #1f2937;
+}
+
+.nav button{
+  background:none;
+  color:white;
+  font-size:18px;
 }
