@@ -3,17 +3,9 @@
 <head>
 <meta name="viewport" content="width=device-width">
 <title>Pro Betting</title>
-
-<style>
-body{background:#020617;color:white;text-align:center;font-family:sans-serif}
-.card{background:#1f2937;margin:10px;padding:10px;border-radius:10px}
-button{padding:10px;margin:5px;border:none;border-radius:8px}
-.betA{background:green}
-.betB{background:red}
-</style>
 </head>
 
-<body>
+<body style="background:#020617;color:white;text-align:center;font-family:sans-serif">
 
 <h2>🔥 PRO BET</h2>
 
@@ -24,74 +16,65 @@ button{padding:10px;margin:5px;border:none;border-radius:8px}
 
 <div id="info"></div>
 
+<h3>💰 Deposit</h3>
+<input id="amount" placeholder="Amount">
+<button onclick="deposit()">Send</button>
+
+<h3>💸 Withdraw</h3>
+<input id="wamount" placeholder="Amount">
+<button onclick="withdraw()">Withdraw</button>
+
 <h3>🎮 Matches</h3>
 <div id="matches"></div>
 
 <script>
-
-// 🔥 CHANGE THIS TO YOUR LIVE URL
-const BASE = "https://bettingpro-4ie8.onrender.com";
-
-// SAFE FETCH
 async function post(url,data){
- try{
-  let r = await fetch(BASE+url,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify(data)
-  });
-  return await r.json();
- }catch(e){
-  alert("Server error");
- }
+ let r = await fetch(url,{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify(data)
+ });
+ return await r.json();
 }
 
 async function get(url){
- try{
-  let r = await fetch(BASE+url);
-  return await r.json();
- }catch{
-  return [];
- }
+ let r = await fetch(url);
+ return await r.json();
 }
 
-// REGISTER
 async function register(){
- let d = await post("/register",{username:user.value,password:pass.value});
- alert(d?.msg || "error");
+ alert((await post("/register",{username:user.value,password:pass.value})).msg);
 }
 
-// LOGIN
 async function login(){
- let d = await post("/login",{username:user.value,password:pass.value});
- alert(d?.msg || "error");
+ alert((await post("/login",{username:user.value,password:pass.value})).msg);
  loadUser();
 }
 
-// USER
 async function loadUser(){
  let d = await get("/me");
- if(d?.username){
-  info.innerHTML = d.username+" ₹"+d.wallet;
- }
+ if(d.username) info.innerHTML=d.username+" ₹"+d.wallet;
 }
 
-// MATCHES
 async function loadMatches(){
  let m = await get("/matches");
-
  matches.innerHTML = m.map(x=>`
-  <div class="card">
-   ${x.name}<br>${x.score}<br>
-   <button class="betA">A ${x.oddsA}</button>
-   <button class="betB">B ${x.oddsB}</button>
-  </div>
- `).join("");
+  <div>
+   ${x.name} ${x.score}<br>
+   A ${x.oddsA} | B ${x.oddsB}
+  </div>`).join("");
+}
+
+async function deposit(){
+ alert((await post("/deposit",{amount:amount.value})).msg);
+}
+
+async function withdraw(){
+ alert((await post("/withdraw",{amount:wamount.value})).msg);
 }
 
 setInterval(loadMatches,2000);
 loadMatches();
-
 </script>
 
 </body>
