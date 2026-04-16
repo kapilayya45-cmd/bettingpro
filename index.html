@@ -5,247 +5,94 @@
 <title>Pro Betting</title>
 
 <style>
-body{
- margin:0;
- font-family:Arial;
- background:#0b1220;
- color:white;
-}
-
-/* TOP BAR */
-.topbar{
- display:flex;
- justify-content:space-between;
- align-items:center;
- padding:12px;
- background:#020617;
- border-bottom:1px solid #1f2937;
-}
-
-.logo{
- font-size:18px;
- font-weight:bold;
-}
-
-.wallet{
- color:#facc15;
-}
-
-/* LOGIN */
-.login{
- padding:10px;
- text-align:center;
-}
-
-.login input{
- padding:8px;
- margin:5px;
- border-radius:6px;
- border:none;
-}
-
-.login button{
- padding:8px 12px;
- margin:5px;
- border:none;
- border-radius:6px;
- background:#2563eb;
- color:white;
- cursor:pointer;
-}
-
-/* MATCH TABLE */
-.table{
- margin-top:10px;
-}
-
-.row{
- display:flex;
- justify-content:space-between;
- padding:12px;
- border-bottom:1px solid #1f2937;
- align-items:center;
-}
-
-.row:hover{
- background:#111827;
-}
-
-.team{
- width:50%;
-}
-
-.odds{
- width:20%;
- text-align:center;
- padding:10px;
- border-radius:6px;
- cursor:pointer;
- transition:0.2s;
-}
-
-.green{
- background:#16a34a;
-}
-
-.red{
- background:#dc2626;
-}
-
-.odds:hover{
- transform:scale(1.05);
-}
-
-/* BET SLIP (RIGHT SIDE) */
-#betslip{
- position:fixed;
- right:0;
- top:0;
- width:300px;
- height:100%;
- background:#020617;
- border-left:1px solid #1f2937;
- padding:15px;
- display:none;
-}
-
-#betslip input{
- width:90%;
- padding:10px;
- margin:10px 0;
- border:none;
- border-radius:6px;
-}
-
-#betslip button{
- width:100%;
- padding:10px;
- margin:5px 0;
- border:none;
- border-radius:6px;
- cursor:pointer;
-}
-
+body{margin:0;font-family:Arial;background:#0b1220;color:white}
+.topbar{display:flex;justify-content:space-between;padding:10px;background:#020617}
+.row{display:flex;justify-content:space-between;padding:12px;border-bottom:1px solid #1f2937}
+.odds{padding:10px;border-radius:6px;cursor:pointer}
+.green{background:#16a34a}
+.red{background:#dc2626}
 </style>
 </head>
 
 <body>
 
-<!-- TOP -->
 <div class="topbar">
- <div class="logo">🔥 PRO BET</div>
- <div class="wallet" id="wallet">₹0</div>
+ <div>🔥 PRO BET</div>
+ <div id="wallet">₹0</div>
 </div>
 
-<!-- LOGIN -->
-<div class="login">
- <input id="user" placeholder="Username">
- <input id="pass" type="password" placeholder="Password"><br>
+<div style="text-align:center;padding:10px">
+ <input id="user" placeholder="user">
+ <input id="pass" type="password" placeholder="pass">
  <button onclick="register()">Register</button>
  <button onclick="login()">Login</button>
 </div>
 
-<!-- MATCHES -->
-<div class="table" id="matches"></div>
-
-<!-- BET SLIP -->
-<div id="betslip">
- <h3>Bet Slip</h3>
- <div id="betInfo"></div>
- <input id="amt" placeholder="Enter Amount">
- <button onclick="placeBet()">Place Bet</button>
- <button onclick="closeSlip()">Close</button>
-</div>
+<div id="matches"></div>
 
 <script>
 
-let selMatch,selOdds;
-
-// API HELPERS
+// ✅ POST
 async function post(url,data){
  let r = await fetch(url,{
   method:"POST",
   headers:{"Content-Type":"application/json"},
   body:JSON.stringify(data),
-  credentials:"include"
+  credentials:"include"   // 🔥 IMPORTANT
  });
  return await r.json();
 }
 
+// ✅ GET
 async function get(url){
- let r = await fetch(url,{credentials:"include"});
+ let r = await fetch(url,{
+  credentials:"include"   // 🔥 IMPORTANT
+ });
  return await r.json();
 }
 
-// AUTH
+// REGISTER
 async function register(){
- alert((await post("/register",{username:user.value,password:pass.value})).msg);
+ let res = await post("/register",{username:user.value,password:pass.value});
+ alert(res.msg);
 }
 
+// LOGIN
 async function login(){
- alert((await post("/login",{username:user.value,password:pass.value})).msg);
- loadUser();
-}
+ let res = await post("/login",{username:user.value,password:pass.value});
+ alert(res.msg);
 
-// USER
-async function loadUser(){
- let d = await get("/me");
- if(d.username){
-  wallet.innerHTML = "₹"+d.wallet;
+ if(res.msg==="Login success"){
+  loadUser();   // 🔥 FIX
  }
 }
 
-// MATCHES
+// LOAD USER
+async function loadUser(){
+ let d = await get("/me");
+ console.log("USER:",d);
+
+ if(d.username){
+  wallet.innerHTML="₹"+d.wallet;
+ }
+}
+
+// LOAD MATCHES
 async function loadMatches(){
  let m = await get("/matches");
 
  matches.innerHTML = m.map(x=>`
   <div class="row">
-   <div class="team">${x.name}<br>${x.score}</div>
-
-   <div class="odds green" onclick="openSlip('${x.name}',${x.oddsA})">
-    ${x.oddsA}
-   </div>
-
-   <div class="odds red" onclick="openSlip('${x.name}',${x.oddsB})">
-    ${x.oddsB}
-   </div>
+   <div>${x.name}<br>${x.score}</div>
+   <div class="odds green">${x.oddsA}</div>
+   <div class="odds red">${x.oddsB}</div>
   </div>
  `).join("");
 }
 
-// BET SLIP
-function openSlip(match,odds){
- selMatch = match;
- selOdds = odds;
-
- betInfo.innerHTML = `
-  <b>${match}</b><br>
-  Odds: ${odds}
- `;
-
- betslip.style.display = "block";
-}
-
-function closeSlip(){
- betslip.style.display = "none";
-}
-
-// PLACE BET
-async function placeBet(){
- let r = await post("/bet",{
-  match:selMatch,
-  odds:selOdds,
-  amount:amt.value
- });
-
- alert(r.msg);
- closeSlip();
- loadUser();
-}
-
 // AUTO LOAD
-setInterval(loadMatches,2000);
+loadUser();
+setInterval(loadMatches,5000);
 loadMatches();
 
 </script>
