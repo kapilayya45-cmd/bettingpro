@@ -2,14 +2,13 @@ const express = require("express");
 const cors = require("cors");
 const session = require("express-session");
 const mongoose = require("mongoose");
+const axios = require("axios");
 const path = require("path");
 
 const app = express();
 
-// ✅ TRUST PROXY (Render kosam)
 app.set("trust proxy", 1);
 
-// ✅ CORS FIX
 app.use(cors({
   origin: true,
   credentials: true
@@ -18,7 +17,6 @@ app.use(cors({
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// ✅ SESSION FIX (MOST IMPORTANT)
 app.use(session({
   secret: "secret123",
   resave: false,
@@ -29,13 +27,12 @@ app.use(session({
   }
 }));
 
-// 🔗 MONGODB (PASSWORD CHANGE CHEYYI)
-mongoose.connect("mongodb+srv://admin:YOUR_PASSWORD@cluster0.ui0ovpg.mongodb.net/betting?retryWrites=true&w=majority")
-.then(()=>console.log("✅ MongoDB Connected"))
-.catch(err=>console.log("❌ DB Error:",err));
+// 🔗 MongoDB
+mongoose.connect("mongodb+srv://admin:YOUR_DB_PASSWORD@cluster0.ui0ovpg.mongodb.net/betting?retryWrites=true&w=majority")
+.then(()=>console.log("MongoDB Connected"))
+.catch(err=>console.log(err));
 
-// ================= SCHEMA =================
-
+// MODELS
 const User = mongoose.model("User",{
   username:String,
   password:String,
@@ -50,62 +47,53 @@ const Bet = mongoose.model("Bet",{
   result:String
 });
 
-// ================= ROUTES =================
-
 // ROOT
 app.get("/",(req,res)=>{
   res.sendFile(path.join(__dirname,"index.html"));
 });
 
-// REGISTER
+// AUTH
 app.post("/register",async(req,res)=>{
   let {username,password} = req.body;
-
   let exists = await User.findOne({username});
   if(exists) return res.json({msg:"User exists"});
-
   await User.create({username,password});
   res.json({msg:"Registered"});
 });
 
-// LOGIN
 app.post("/login",async(req,res)=>{
   let {username,password} = req.body;
-
   let user = await User.findOne({username,password});
   if(!user) return res.json({msg:"Invalid"});
-
   req.session.user = {username:user.username};
   res.json({msg:"Login success"});
 });
 
-// USER
 app.get("/me",async(req,res)=>{
   if(!req.session.user) return res.json({});
-
   let user = await User.findOne({username:req.session.user.username});
   res.json(user);
 });
 
-// MATCHES
+// 🏏 REAL MATCHES (YOUR API)
 app.get("/matches", async (req,res)=>{
  try{
 
   const response = await axios.get(
-   "https://cricket-live-data.p.rapidapi.com/matches",
+   "https://cricketapi12.p.rapidapi.com/api/cricket/tournament/11160/schedules/15/11/2024",
    {
     headers:{
      "X-RapidAPI-Key":"bd9714a581mshd9d62be37c57d10p165815jsnda58165bf017",
-     "X-RapidAPI-Host":"cricket-live-data.p.rapidapi.com"
+     "X-RapidAPI-Host":"cricketapi12.p.rapidapi.com"
     }
    }
   );
 
-  let data = response.data.results || [];
+  let data = response.data.events || [];
 
   let matches = data.map(m=>({
-    name: m.team1 + " vs " + m.team2,
-    score: m.score || "Live",
+    name: m.homeTeam.name + " vs " + m.awayTeam.name,
+    score: m.homeScore?.display + " - " + m.awayScore?.display,
     oddsA:(1.5+Math.random()).toFixed(2),
     oddsB:(1.5+Math.random()).toFixed(2)
   }));
@@ -156,8 +144,6 @@ app.post("/bet",async(req,res)=>{
   res.json({msg:result});
 });
 
-// ================= SERVER =================
-
 app.listen(process.env.PORT || 3001,()=>{
-  console.log("🔥 Server Running");
+  console.log("Server Running");
 });
