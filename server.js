@@ -88,11 +88,34 @@ app.get("/me",async(req,res)=>{
 });
 
 // MATCHES
-app.get("/matches",(req,res)=>{
-  res.json([
-    {name:"IND vs AUS",score:"120/3",oddsA:(1.5+Math.random()).toFixed(2),oddsB:(1.5+Math.random()).toFixed(2)},
-    {name:"CSK vs MI",score:"90/2",oddsA:(1.5+Math.random()).toFixed(2),oddsB:(1.5+Math.random()).toFixed(2)}
-  ]);
+app.get("/matches", async (req,res)=>{
+ try{
+
+  const response = await axios.get(
+   "https://cricket-live-data.p.rapidapi.com/matches",
+   {
+    headers:{
+     "X-RapidAPI-Key":"bd9714a581mshd9d62be37c57d10p165815jsnda58165bf017",
+     "X-RapidAPI-Host":"cricket-live-data.p.rapidapi.com"
+    }
+   }
+  );
+
+  let data = response.data.results || [];
+
+  let matches = data.map(m=>({
+    name: m.team1 + " vs " + m.team2,
+    score: m.score || "Live",
+    oddsA:(1.5+Math.random()).toFixed(2),
+    oddsB:(1.5+Math.random()).toFixed(2)
+  }));
+
+  res.json(matches);
+
+ }catch(e){
+  console.log("API ERROR:", e.message);
+  res.json([]);
+ }
 });
 
 // BET
