@@ -1,69 +1,21 @@
 <!DOCTYPE html>
 <html>
-<head>
-<meta name="viewport" content="width=device-width">
-<title>Login Fix Final</title>
-</head>
-
 <body style="background:black;color:white;text-align:center;padding:50px">
 
-<h2>Login</h2>
+<h2>Test Login</h2>
 
 <input id="u" placeholder="Username"><br><br>
 <input id="p" type="password" placeholder="Password"><br><br>
 
-<button onclick="reg()">Register</button>
-<button onclick="log()">Login</button>
+<button onclick="test()">Login</button>
 
-<script type="module">
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-const app = initializeApp({
-  apiKey: "AIzaSyDEfm4NASnjaKU4dfUtsp_thdjvUUwIDZY",
-  authDomain: "pro-betting-84120.firebaseapp.com",
-  projectId: "pro-betting-84120"
-});
-
-const db = getFirestore(app);
-
-// REGISTER
-window.reg = async function(){
+<script>
+function test(){
  let u = document.getElementById("u").value;
  let p = document.getElementById("p").value;
 
- if(!u || !p) return alert("Enter data");
-
- let ref = doc(db,"users",u);
- let snap = await getDoc(ref);
-
- if(snap.exists()) return alert("User exists");
-
- await setDoc(ref,{password:p,wallet:1000});
- alert("Registered");
-};
-
-// LOGIN
-window.log = async function(){
- let u = document.getElementById("u").value;
- let p = document.getElementById("p").value;
-
- let ref = doc(db,"users",u);
- let snap = await getDoc(ref);
-
- if(!snap.exists()) return alert("No user");
-
- if(snap.data().password !== p){
-   return alert("Wrong pass");
- }
-
- localStorage.setItem("user",u);
-
- alert("Login success");
-
-};
-
+ alert("Clicked ✅ " + u);
+}
 </script>
 
 </body>
