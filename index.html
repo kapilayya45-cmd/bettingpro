@@ -19,6 +19,7 @@ body{margin:0;font-family:Arial;background:#0b1220;color:white}
 
 <body>
 
+<!-- LOGIN -->
 <div id="loginBox" class="center">
 <h2>Login</h2>
 <input id="u" placeholder="Username"><br><br>
@@ -27,13 +28,14 @@ body{margin:0;font-family:Arial;background:#0b1220;color:white}
 <button onclick="log()">Login</button>
 </div>
 
+<!-- APP -->
 <div id="appBox" style="display:none">
 
 <div style="padding:10px;background:#020617">
 🔥 PRO BET | Wallet: ₹<span id="wallet">0</span>
 </div>
 
-<h3>🏏 LIVE MATCHES</h3>
+<h3>🏏 Live Matches</h3>
 <div id="matches"></div>
 
 <h3>📊 Bet History</h3>
@@ -41,6 +43,7 @@ body{margin:0;font-family:Arial;background:#0b1220;color:white}
 
 </div>
 
+<!-- BET SLIP -->
 <div id="betslip">
 <h3>Bet Slip</h3>
 <div id="betInfo"></div>
@@ -49,6 +52,9 @@ body{margin:0;font-family:Arial;background:#0b1220;color:white}
 </div>
 
 <script>
+
+// 🔥 CHANGE THIS
+const API_URL = "https://your-render-url.onrender.com/matches";
 
 // Firebase
 firebase.initializeApp({
@@ -64,10 +70,13 @@ let selMatch,selOdds;
 
 // REGISTER
 function reg(){
+ if(!u.value || !p.value) return alert("Enter details");
+
  db.collection("users").doc(u.value).set({
   password:p.value,
   wallet:1000
  });
+
  alert("Registered");
 }
 
@@ -86,12 +95,12 @@ function log(){
 function showApp(){
  loginBox.style.display="none";
  appBox.style.display="block";
+
  loadUser();
  loadMatches();
  loadHistory();
 
- // 🔥 auto refresh (live feel)
- setInterval(loadMatches,5000);
+ setInterval(loadMatches,5000); // 🔥 auto refresh
 }
 
 // WALLET
@@ -101,30 +110,36 @@ function loadUser(){
  });
 }
 
-// 🔥 LIVE MATCH SIMULATION
-let liveMatches=[
- {name:"India vs Australia",score1:120,score2:110},
- {name:"CSK vs MI",score1:80,score2:75}
-];
+// 🔥 LOAD MATCHES FROM BACKEND
+async function loadMatches(){
+ try{
+  let r = await fetch(API_URL);
+  let data = await r.json();
 
-function loadMatches(){
+  let m = data.data || data.events || [];
 
- // random score update (live feel)
- liveMatches.forEach(m=>{
-  m.score1 += Math.floor(Math.random()*5);
-  m.score2 += Math.floor(Math.random()*5);
- });
+  if(m.length === 0){
+    matches.innerHTML = "<div style='padding:10px'>No live matches</div>";
+    return;
+  }
 
- matches.innerHTML=liveMatches.map(m=>`
-  <div class="row">
-   <div>${m.name}<br>${m.score1}/${Math.floor(Math.random()*10)} - ${m.score2}/${Math.floor(Math.random()*10)}</div>
-   <div class="green" onclick="openSlip('${m.name}',1.9)">1.9</div>
-   <div class="red" onclick="openSlip('${m.name}',2.2)">2.2</div>
-  </div>
- `).join("");
+  matches.innerHTML = m.slice(0,10).map(x=>`
+   <div class="row">
+    <div>
+     ${x.team1 || x.homeTeam?.name} vs ${x.team2 || x.awayTeam?.name}<br>
+     ${x.score || x.homeScore?.display || "Live"}
+    </div>
+    <div class="green" onclick="openSlip('${x.team1 || x.homeTeam?.name} vs ${x.team2 || x.awayTeam?.name}',1.9)">1.9</div>
+    <div class="red" onclick="openSlip('${x.team1 || x.homeTeam?.name} vs ${x.team2 || x.awayTeam?.name}',2.2)">2.2</div>
+   </div>
+  `).join("");
+
+ }catch(e){
+  matches.innerHTML = "<div style='padding:10px'>Server error</div>";
+ }
 }
 
-// BET
+// BET OPEN
 function openSlip(m,o){
  selMatch=m;
  selOdds=o;
@@ -132,24 +147,24 @@ function openSlip(m,o){
  betInfo.innerHTML=m+" @ "+o;
 }
 
-// 🔥 FIXED BET FUNCTION
+// PLACE BET
 function placeBet(){
- let amount=Number(amt.value);
+ let amount = Number(amt.value);
 
- if(!amount) return alert("Enter amount");
+ if(!amount || amount<=0) return alert("Enter amount");
 
- let ref=db.collection("users").doc(currentUser);
+ let ref = db.collection("users").doc(currentUser);
 
  ref.get().then(doc=>{
-  let data=doc.data();
+  let data = doc.data();
 
-  if(data.wallet<amount) return alert("Low balance");
+  if(data.wallet < amount) return alert("Low balance");
 
-  let win=Math.random()>0.5;
-  let walletNew=data.wallet-amount;
+  let win = Math.random()>0.5;
+  let walletNew = data.wallet - amount;
 
   if(win){
-    walletNew += amount*selOdds;
+    walletNew += amount * selOdds;
   }
 
   ref.update({wallet:walletNew}).then(()=>{
@@ -167,6 +182,7 @@ function placeBet(){
       loadUser();
       loadHistory();
       betslip.style.display="none";
+      amt.value="";
     });
 
   });
@@ -182,6 +198,11 @@ function loadHistory(){
  .then(snap=>{
   let list=[];
   snap.forEach(d=>list.push(d.data()));
+
+  if(list.length===0){
+    history.innerHTML="<div style='padding:10px'>No bets yet</div>";
+    return;
+  }
 
   history.innerHTML=list.map(x=>`
    <div class="row">
