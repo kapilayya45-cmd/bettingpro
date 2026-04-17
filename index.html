@@ -53,7 +53,7 @@ body{margin:0;font-family:Arial;background:#0b1220;color:white}
 
 <script>
 
-// Firebase
+// 🔥 FIREBASE
 firebase.initializeApp({
   apiKey: "AIzaSyDEfm4NASnjaKU4dfUtsp_thdjvUUwIDZY",
   authDomain: "pro-betting-84120.firebaseapp.com",
@@ -111,7 +111,7 @@ function loadUser(){
  });
 }
 
-// 🏏 REAL API
+// 🏏 MATCHES (REAL + FALLBACK)
 async function loadMatches(){
  try{
   let r=await fetch("https://cricketapi12.p.rapidapi.com/api/cricket/tournament/11160/schedules/15/11/2024",{
@@ -122,7 +122,10 @@ async function loadMatches(){
   });
 
   let data=await r.json();
-  let m=data.events||[];
+
+  if(!data.events) throw "API fail";
+
+  let m=data.events;
 
   matches.innerHTML=m.map(x=>`
    <div class="row">
@@ -134,11 +137,25 @@ async function loadMatches(){
   `).join("");
 
  }catch(e){
-  matches.innerHTML="<div>API Failed</div>";
+
+  // 🔥 fallback matches
+  let m=[
+   {name:"India vs Australia",score:"120/3"},
+   {name:"CSK vs MI",score:"90/2"},
+   {name:"RCB vs KKR",score:"150/6"}
+  ];
+
+  matches.innerHTML=m.map(x=>`
+   <div class="row">
+    <div>${x.name}<br>${x.score}</div>
+    <div class="green" onclick="openSlip('${x.name}',1.8)">1.8</div>
+    <div class="red" onclick="openSlip('${x.name}',2.1)">2.1</div>
+   </div>
+  `).join("");
  }
 }
 
-// OPEN BET
+// BET
 function openSlip(m,o){
  selMatch=m;
  selOdds=o;
