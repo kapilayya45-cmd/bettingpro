@@ -1,24 +1,33 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta name="viewport" content="width=device-width">
+<title>Login</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
+<style>
+body{background:#0b1220;color:white;text-align:center;padding:50px;font-family:Arial}
+input{padding:10px;margin:5px}
+button{padding:10px;margin:5px}
+</style>
+
 </head>
 
-<body style="background:black;color:white;text-align:center;padding:50px">
+<body>
 
-<h2>FINAL LOGIN DEBUG</h2>
+<h2>🔥 PRO BET LOGIN</h2>
 
-<input id="u" placeholder="Username"><br><br>
-<input id="p" placeholder="Password"><br><br>
+<input id="u" placeholder="Username"><br>
+<input id="p" type="password" placeholder="Password"><br>
 
 <button onclick="reg()">Register</button>
 <button onclick="log()">Login</button>
 
 <script>
 
+// 🔥 Firebase init
 firebase.initializeApp({
   apiKey: "AIzaSyDEfm4NASnjaKU4dfUtsp_thdjvUUwIDZY",
   authDomain: "pro-betting-84120.firebaseapp.com",
@@ -29,44 +38,46 @@ const db = firebase.firestore();
 
 // REGISTER
 function reg(){
- let u = uInput.value;
- let p = pInput.value;
+ let u = document.getElementById("u").value;
+ let p = document.getElementById("p").value;
 
- db.collection("users").doc(u).set({
-   password:p,
-   wallet:1000
- }).then(()=>{
-   alert("Registered ✅");
- }).catch(e=>{
-   alert("ERROR: "+e.message);
-   console.log(e);
- });
-}
+ if(!u || !p) return alert("Enter details");
 
-// LOGIN
-function log(){
- let u = uInput.value;
- let p = pInput.value;
-
- db.collection("users").doc(u).get()
- .then(doc=>{
-   if(!doc.exists){
-     alert("No user ❌");
-   }else if(doc.data().password !== p){
-     alert("Wrong pass ❌");
+ db.collection("users").doc(u).get().then(doc=>{
+   if(doc.exists){
+     alert("User exists");
    }else{
-     alert("Login success ✅");
+     db.collection("users").doc(u).set({
+       password:p,
+       wallet:1000
+     });
+     alert("Registered ✅");
    }
- })
- .catch(e=>{
-   alert("ERROR: "+e.message);
-   console.log(e);
  });
 }
 
-// FIX INPUTS
-const uInput = document.getElementById("u");
-const pInput = document.getElementById("p");
+// LOGIN + REDIRECT
+function log(){
+ let u = document.getElementById("u").value;
+ let p = document.getElementById("p").value;
+
+ db.collection("users").doc(u).get().then(doc=>{
+   if(!doc.exists){
+     return alert("User not found ❌");
+   }
+
+   if(doc.data().password !== p){
+     return alert("Wrong password ❌");
+   }
+
+   localStorage.setItem("user",u);
+
+   alert("Login success ✅");
+
+   // 🔥 REDIRECT FIX
+   window.location.href = "./app.html";
+ });
+}
 
 </script>
 
