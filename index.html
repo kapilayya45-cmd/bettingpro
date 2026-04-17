@@ -11,11 +11,9 @@ body{margin:0;font-family:Arial;background:#0b1220;color:white}
 .odds{padding:10px;border-radius:6px;cursor:pointer}
 .green{background:#16a34a}
 .red{background:#dc2626}
+#betslip{position:fixed;right:0;top:0;width:300px;height:100%;background:black;padding:10px;display:none}
 </style>
 
-<!-- ✅ FIREBASE CDN -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
 </head>
 
 <body>
@@ -34,12 +32,21 @@ body{margin:0;font-family:Arial;background:#0b1220;color:white}
 
 <div id="matches"></div>
 
+<div id="betslip">
+ <h3>Bet Slip</h3>
+ <div id="betInfo"></div>
+ <input id="amt" placeholder="Amount">
+ <button onclick="placeBet()">Place Bet</button>
+</div>
+
 <script type="module">
 
-// 🔥 FIREBASE CONFIG (NEE DI)
+// 🔥 FIREBASE IMPORTS (UPDATED)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+// 🔥 NEE CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyDEfm4NASnjaKU4dfUtsp_thdjvUUwIDZY",
   authDomain: "pro-betting-84120.firebaseapp.com",
@@ -50,11 +57,15 @@ const firebaseConfig = {
   measurementId: "G-2N77JBB27Y"
 };
 
+// 🔥 INIT
 const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 const db = getFirestore(app);
 
+// ================= USERS =================
+
 // REGISTER
-async function register(){
+window.register = async function(){
  let u = user.value;
  let p = pass.value;
 
@@ -73,10 +84,10 @@ async function register(){
  });
 
  alert("Registered");
-}
+};
 
 // LOGIN
-async function login(){
+window.login = async function(){
  let u = user.value;
  let p = pass.value;
 
@@ -91,7 +102,7 @@ async function login(){
  localStorage.setItem("user",u);
  loadUser();
  alert("Login success");
-}
+};
 
 // LOAD USER
 async function loadUser(){
@@ -105,22 +116,80 @@ async function loadUser(){
  wallet.innerHTML = "₹"+d.wallet;
 }
 
-// FAKE MATCHES (UI)
+// ================= MATCHES =================
+
+// FAKE LIVE MATCHES
 function loadMatches(){
  let m = [
-  {name:"India vs Australia",score:"120-3",oddsA:"1.8",oddsB:"2.1"},
-  {name:"CSK vs MI",score:"90-2",oddsA:"1.6",oddsB:"2.3"}
+  {name:"India vs Australia",score:"120/3",oddsA:1.8,oddsB:2.1},
+  {name:"CSK vs MI",score:"90/2",oddsA:1.6,oddsB:2.3}
  ];
 
  matches.innerHTML = m.map(x=>`
   <div class="row">
    <div>${x.name}<br>${x.score}</div>
-   <div class="odds green">${x.oddsA}</div>
-   <div class="odds red">${x.oddsB}</div>
+   <div class="odds green" onclick="openSlip('${x.name}',${x.oddsA})">${x.oddsA}</div>
+   <div class="odds red" onclick="openSlip('${x.name}',${x.oddsB})">${x.oddsB}</div>
   </div>
  `).join("");
 }
 
+// ================= BET =================
+
+let selMatch,selOdds;
+
+// OPEN BET SLIP
+window.openSlip = function(m,o){
+ selMatch=m;
+ selOdds=o;
+ betslip.style.display="block";
+ betInfo.innerHTML=m+" @ "+o;
+};
+
+// PLACE BET
+window.placeBet = async function(){
+ let u = localStorage.getItem("user");
+ if(!u) return alert("Login first");
+
+ let amount = Number(amt.value);
+
+ let ref = doc(db,"users",u);
+ let snap = await getDoc(ref);
+ let userData = snap.data();
+
+ if(userData.wallet < amount){
+   return alert("Insufficient balance");
+ }
+
+ let newWallet = userData.wallet - amount;
+
+ let result;
+
+ if(Math.random()>0.5){
+   let win = amount * selOdds;
+   newWallet += win;
+   result="WIN 🎉";
+ }else{
+   result="LOSE ❌";
+ }
+
+ // UPDATE WALLET
+ await updateDoc(ref,{wallet:newWallet});
+
+ // SAVE BET
+ await addDoc(collection(db,"bets"),{
+   username:u,
+   match:selMatch,
+   amount,
+   odds:selOdds,
+   result
+ });
+
+ alert(result);
+ loadUser();
+};
+
+// INIT
 loadUser();
 loadMatches();
 
