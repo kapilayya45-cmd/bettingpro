@@ -2,53 +2,29 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width">
-<title>Pro Betting Final</title>
+<title>Login Fix</title>
 
 <style>
-body{margin:0;font-family:Arial;background:#0b1220;color:white}
-.topbar{display:flex;justify-content:space-between;padding:10px;background:#020617}
-.row{display:flex;justify-content:space-between;padding:12px;border-bottom:1px solid #1f2937}
-.odds{padding:10px;border-radius:6px;cursor:pointer}
-.green{background:#16a34a}
-.red{background:#dc2626}
-#betslip{position:fixed;right:0;top:0;width:300px;height:100%;background:black;padding:10px;display:none}
-#history{padding:10px;background:#020617}
+body{background:#0b1220;color:white;font-family:Arial;text-align:center;padding:50px}
+input{padding:10px;margin:5px}
+button{padding:10px;margin:5px}
 </style>
-
 </head>
 
 <body>
 
-<div class="topbar">
- <div>🔥 PRO BET</div>
- <div id="wallet">₹0</div>
-</div>
+<h2>Login</h2>
 
-<div style="text-align:center;padding:10px">
- <input id="user" placeholder="user">
- <input id="pass" type="password" placeholder="pass">
- <button onclick="register()">Register</button>
- <button onclick="login()">Login</button>
-</div>
+<input id="username" placeholder="Username"><br>
+<input id="password" type="password" placeholder="Password"><br>
 
-<h3 style="padding-left:10px">🏏 Live Matches</h3>
-<div id="matches"></div>
-
-<h3 style="padding-left:10px">📊 Bet History</h3>
-<div id="history"></div>
-
-<div id="betslip">
- <h3>Bet Slip</h3>
- <div id="betInfo"></div>
- <input id="amt" placeholder="Amount">
- <button onclick="placeBet()">Place Bet</button>
-</div>
+<button id="registerBtn">Register</button>
+<button id="loginBtn">Login</button>
 
 <script type="module">
 
-// 🔥 FIREBASE
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, addDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDEfm4NASnjaKU4dfUtsp_thdjvUUwIDZY",
@@ -59,141 +35,53 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// ================= USER =================
+// ✅ SAFE INPUTS
+const username = document.getElementById("username");
+const password = document.getElementById("password");
 
-window.register = async ()=>{
- let ref = doc(db,"users",user.value);
- let snap = await getDoc(ref);
+// REGISTER
+document.getElementById("registerBtn").onclick = async ()=>{
+ let u = username.value.trim();
+ let p = password.value.trim();
 
- if(snap.exists()) return alert("User exists");
-
- await setDoc(ref,{username:user.value,password:pass.value,wallet:1000});
- alert("Registered");
-};
-
-window.login = async ()=>{
- let ref = doc(db,"users",user.value);
- let snap = await getDoc(ref);
-
- if(!snap.exists() || snap.data().password !== pass.value){
-  return alert("Invalid");
- }
-
- localStorage.setItem("user",user.value);
- loadUser();
- loadHistory();
- alert("Login success");
-};
-
-async function loadUser(){
- let u = localStorage.getItem("user");
- if(!u) return;
-
- let snap = await getDoc(doc(db,"users",u));
- wallet.innerHTML="₹"+snap.data().wallet;
-}
-
-// ================= REAL API =================
-
-async function loadMatches(){
- try{
-  let r = await fetch("https://cricketapi12.p.rapidapi.com/api/cricket/tournament/11160/schedules/15/11/2024",{
-   headers:{
-    "X-RapidAPI-Key":"bd9714a581mshd9d62be37c57d10p165815jsnda58165bf017",
-    "X-RapidAPI-Host":"cricketapi12.p.rapidapi.com"
-   }
-  });
-
-  let data = await r.json();
-  let m = data.events || [];
-
-  matches.innerHTML = m.map(x=>`
-   <div class="row">
-    <div>${x.homeTeam.name} vs ${x.awayTeam.name}<br>
-    ${x.homeScore?.display || 0} - ${x.awayScore?.display || 0}</div>
-    <div class="odds green" onclick="openSlip('${x.homeTeam.name} vs ${x.awayTeam.name}',1.8)">1.8</div>
-    <div class="odds red" onclick="openSlip('${x.homeTeam.name} vs ${x.awayTeam.name}',2.1)">2.1</div>
-   </div>
-  `).join("");
-
- }catch(e){
-  matches.innerHTML="<div style='padding:10px'>API Failed</div>";
- }
-}
-
-// ================= BET =================
-
-let selMatch,selOdds;
-
-window.openSlip=(m,o)=>{
- selMatch=m;
- selOdds=o;
- betslip.style.display="block";
- betInfo.innerHTML=m+" @ "+o;
-};
-
-window.placeBet = async ()=>{
- let u = localStorage.getItem("user");
- if(!u) return alert("Login first");
-
- let amount = Number(amt.value);
+ if(!u || !p) return alert("Enter details");
 
  let ref = doc(db,"users",u);
  let snap = await getDoc(ref);
- let data = snap.data();
 
- if(data.wallet < amount) return alert("No balance");
-
- let walletNew = data.wallet - amount;
-
- let result;
- if(Math.random()>0.5){
-  walletNew += amount * selOdds;
-  result="WIN 🎉";
- }else{
-  result="LOSE ❌";
+ if(snap.exists()){
+  return alert("User exists");
  }
 
- await updateDoc(ref,{wallet:walletNew});
-
- await addDoc(collection(db,"bets"),{
-  username:u,
-  match:selMatch,
-  amount,
-  odds:selOdds,
-  result,
-  time:Date.now()
- });
-
- alert(result);
- loadUser();
- loadHistory();
+ await setDoc(ref,{username:u,password:p,wallet:1000});
+ alert("Registered ✅");
 };
 
-// ================= HISTORY =================
+// LOGIN
+document.getElementById("loginBtn").onclick = async ()=>{
+ let u = username.value.trim();
+ let p = password.value.trim();
 
-async function loadHistory(){
- let u = localStorage.getItem("user");
- if(!u) return;
+ if(!u || !p) return alert("Enter details");
 
- let q = query(collection(db,"bets"),where("username","==",u));
- let snap = await getDocs(q);
+ let ref = doc(db,"users",u);
+ let snap = await getDoc(ref);
 
- let list = [];
- snap.forEach(doc=>list.push(doc.data()));
+ if(!snap.exists()){
+  return alert("User not found ❌");
+ }
 
- history.innerHTML = list.map(x=>`
-  <div class="row">
-   <div>${x.match}<br>₹${x.amount}</div>
-   <div>${x.result}</div>
-  </div>
- `).join("");
-}
+ if(snap.data().password !== p){
+  return alert("Wrong password ❌");
+ }
 
-// INIT
-loadUser();
-loadMatches();
-setInterval(loadMatches,10000);
+ localStorage.setItem("user",u);
+
+ alert("Login success ✅");
+
+ // 👉 redirect to main app
+ window.location.href = "app.html";
+};
 
 </script>
 
