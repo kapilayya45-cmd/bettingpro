@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width">
-<title>Pro Betting</title>
+<title>Pro Betting Firebase</title>
 
 <style>
 body{margin:0;font-family:Arial;background:#0b1220;color:white}
@@ -12,6 +12,10 @@ body{margin:0;font-family:Arial;background:#0b1220;color:white}
 .green{background:#16a34a}
 .red{background:#dc2626}
 </style>
+
+<!-- ✅ FIREBASE CDN -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
 </head>
 
 <body>
@@ -30,56 +34,83 @@ body{margin:0;font-family:Arial;background:#0b1220;color:white}
 
 <div id="matches"></div>
 
-<script>
+<script type="module">
 
-// ✅ POST
-async function post(url,data){
- let r = await fetch(url,{
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-  body:JSON.stringify(data),
-  credentials:"include"   // 🔥 IMPORTANT
- });
- return await r.json();
-}
+// 🔥 FIREBASE CONFIG (NEE DI)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// ✅ GET
-async function get(url){
- let r = await fetch(url,{
-  credentials:"include"   // 🔥 IMPORTANT
- });
- return await r.json();
-}
+const firebaseConfig = {
+  apiKey: "AIzaSyDEfm4NASnjaKU4dfUtsp_thdjvUUwIDZY",
+  authDomain: "pro-betting-84120.firebaseapp.com",
+  projectId: "pro-betting-84120",
+  storageBucket: "pro-betting-84120.firebasestorage.app",
+  messagingSenderId: "52030435051",
+  appId: "1:52030435051:web:a7ec67d0e40a1a8e5958ae",
+  measurementId: "G-2N77JBB27Y"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 // REGISTER
 async function register(){
- let res = await post("/register",{username:user.value,password:pass.value});
- alert(res.msg);
+ let u = user.value;
+ let p = pass.value;
+
+ let ref = doc(db,"users",u);
+ let snap = await getDoc(ref);
+
+ if(snap.exists()){
+   alert("User exists");
+   return;
+ }
+
+ await setDoc(ref,{
+   username:u,
+   password:p,
+   wallet:1000
+ });
+
+ alert("Registered");
 }
 
 // LOGIN
 async function login(){
- let res = await post("/login",{username:user.value,password:pass.value});
- alert(res.msg);
+ let u = user.value;
+ let p = pass.value;
 
- if(res.msg==="Login success"){
-  loadUser();   // 🔥 FIX
+ let ref = doc(db,"users",u);
+ let snap = await getDoc(ref);
+
+ if(!snap.exists() || snap.data().password !== p){
+   alert("Invalid");
+   return;
  }
+
+ localStorage.setItem("user",u);
+ loadUser();
+ alert("Login success");
 }
 
 // LOAD USER
 async function loadUser(){
- let d = await get("/me");
- console.log("USER:",d);
+ let u = localStorage.getItem("user");
+ if(!u) return;
 
- if(d.username){
-  wallet.innerHTML="₹"+d.wallet;
- }
+ let ref = doc(db,"users",u);
+ let snap = await getDoc(ref);
+
+ let d = snap.data();
+ wallet.innerHTML = "₹"+d.wallet;
 }
 
-// LOAD MATCHES
-async function loadMatches(){
- let m = await get("/matches");
+// FAKE MATCHES (UI)
+function loadMatches(){
+ let m = [
+  {name:"India vs Australia",score:"120-3",oddsA:"1.8",oddsB:"2.1"},
+  {name:"CSK vs MI",score:"90-2",oddsA:"1.6",oddsB:"2.3"}
+ ];
 
  matches.innerHTML = m.map(x=>`
   <div class="row">
@@ -90,9 +121,7 @@ async function loadMatches(){
  `).join("");
 }
 
-// AUTO LOAD
 loadUser();
-setInterval(loadMatches,5000);
 loadMatches();
 
 </script>
