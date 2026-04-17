@@ -6,8 +6,12 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-// ✅ Node 18+ lo fetch direct available (node-fetch vaddu)
+// ✅ ROOT (check backend)
+app.get("/", (req, res) => {
+  res.send("Backend running 🚀");
+});
 
+// ✅ MATCHES API (REAL DATA)
 app.get("/matches", async (req, res) => {
   try {
     const response = await fetch(
@@ -24,13 +28,11 @@ app.get("/matches", async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: "API failed", details: err.toString() });
+    res.status(500).json({
+      error: "API failed",
+      message: err.toString(),
+    });
   }
-});
-
-// ✅ ROOT route (IMPORTANT for Render)
-app.get("/", (req, res) => {
-  res.send("Backend running 🚀");
 });
 
 app.listen(PORT, () => {
