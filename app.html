@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width">
-<title>Pro Betting App</title>
+<title>Pro Betting</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -41,7 +41,7 @@ body{margin:0;font-family:Arial;background:#0b1220;color:white}
 
 <script>
 
-// 🔥 FIREBASE INIT
+// 🔥 Firebase
 firebase.initializeApp({
   apiKey: "AIzaSyDEfm4NASnjaKU4dfUtsp_thdjvUUwIDZY",
   authDomain: "pro-betting-84120.firebaseapp.com",
@@ -50,22 +50,21 @@ firebase.initializeApp({
 
 const db = firebase.firestore();
 
-// USER
+// 🔥 CHECK LOGIN
 const user = localStorage.getItem("user");
 if(!user){
  alert("Login first");
  window.location.href="index.html";
 }
 
-// LOAD USER
+// WALLET
 function loadUser(){
  db.collection("users").doc(user).get().then(doc=>{
    wallet.innerHTML="₹"+doc.data().wallet;
  });
 }
 
-// ================= REAL API =================
-
+// 🏏 MATCHES (API)
 async function loadMatches(){
  try{
   let r = await fetch("https://cricketapi12.p.rapidapi.com/api/cricket/tournament/11160/schedules/15/11/2024",{
@@ -92,8 +91,7 @@ async function loadMatches(){
  }
 }
 
-// ================= BET =================
-
+// BET
 let selMatch,selOdds;
 
 function openSlip(m,o){
@@ -106,9 +104,7 @@ function openSlip(m,o){
 function placeBet(){
  let amount = Number(amt.value);
 
- let ref = db.collection("users").doc(user);
-
- ref.get().then(doc=>{
+ db.collection("users").doc(user).get().then(doc=>{
    let data = doc.data();
 
    if(data.wallet < amount){
@@ -116,7 +112,6 @@ function placeBet(){
    }
 
    let walletNew = data.wallet - amount;
-
    let result;
 
    if(Math.random()>0.5){
@@ -126,7 +121,7 @@ function placeBet(){
      result="LOSE ❌";
    }
 
-   ref.update({wallet:walletNew});
+   db.collection("users").doc(user).update({wallet:walletNew});
 
    db.collection("bets").add({
      username:user,
@@ -143,8 +138,7 @@ function placeBet(){
  });
 }
 
-// ================= HISTORY =================
-
+// HISTORY
 function loadHistory(){
  db.collection("bets")
  .where("username","==",user)
