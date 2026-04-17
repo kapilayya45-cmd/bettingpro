@@ -1,13 +1,13 @@
 const express = require("express");
 const cors = require("cors");
-const fetch = require("node-fetch");
 
 const app = express();
 app.use(cors());
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-// 🔥 LIVE MATCHES API (proxy)
+// ✅ Node 18+ lo fetch direct available (node-fetch vaddu)
+
 app.get("/matches", async (req, res) => {
   try {
     const response = await fetch(
@@ -24,10 +24,15 @@ app.get("/matches", async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: "API failed" });
+    res.status(500).json({ error: "API failed", details: err.toString() });
   }
 });
 
+// ✅ ROOT route (IMPORTANT for Render)
+app.get("/", (req, res) => {
+  res.send("Backend running 🚀");
+});
+
 app.listen(PORT, () => {
-  console.log("Server running on http://localhost:" + PORT);
+  console.log("Server running on port " + PORT);
 });
