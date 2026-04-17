@@ -11,8 +11,9 @@
 body{margin:0;font-family:Arial;background:#0b1220;color:white}
 .center{text-align:center;padding:40px}
 .row{display:flex;justify-content:space-between;padding:12px;border-bottom:1px solid #1f2937}
-.green{background:#16a34a;padding:8px}
-.red{background:#dc2626;padding:8px}
+.green{background:#16a34a;padding:8px;cursor:pointer}
+.red{background:#dc2626;padding:8px;cursor:pointer}
+#betslip{position:fixed;right:0;top:0;width:250px;height:100%;background:black;padding:10px;display:none}
 </style>
 </head>
 
@@ -34,9 +35,20 @@ body{margin:0;font-family:Arial;background:#0b1220;color:white}
 🔥 PRO BET | Wallet: ₹<span id="wallet">0</span>
 </div>
 
-<h3>Matches</h3>
+<h3>🏏 Matches</h3>
 <div id="matches"></div>
 
+<h3>📊 Bet History</h3>
+<div id="history"></div>
+
+</div>
+
+<!-- BET SLIP -->
+<div id="betslip">
+<h3>Bet Slip</h3>
+<div id="betInfo"></div>
+<input id="amt" placeholder="Amount">
+<button onclick="placeBet()">Bet</button>
 </div>
 
 <script>
@@ -50,12 +62,13 @@ firebase.initializeApp({
 
 const db = firebase.firestore();
 
-let currentUser = null;
+let currentUser=null;
+let selMatch,selOdds;
 
 // REGISTER
 function reg(){
- let u = uInput.value;
- let p = pInput.value;
+ let u=uInput.value;
+ let p=pInput.value;
 
  db.collection("users").doc(u).set({
   password:p,
@@ -67,21 +80,17 @@ function reg(){
 
 // LOGIN
 function log(){
- let u = uInput.value;
- let p = pInput.value;
+ let u=uInput.value;
+ let p=pInput.value;
 
  db.collection("users").doc(u).get().then(doc=>{
   if(!doc.exists) return alert("No user");
 
-  if(doc.data().password !== p){
-   return alert("Wrong password");
-  }
+  if(doc.data().password!==p) return alert("Wrong pass");
 
-  currentUser = u;
+  currentUser=u;
 
-  alert("Login success");
-
-  showApp();   // 🔥 no redirect
+  showApp();
  });
 }
 
@@ -92,33 +101,110 @@ function showApp(){
 
  loadUser();
  loadMatches();
+ loadHistory();
 }
 
 // WALLET
 function loadUser(){
  db.collection("users").doc(currentUser).get().then(doc=>{
-  wallet.innerHTML = doc.data().wallet;
+  wallet.innerHTML=doc.data().wallet;
  });
 }
 
-// MATCHES (dummy for now)
-function loadMatches(){
- let m = [
-  {name:"India vs Aus",odds:1.8},
-  {name:"CSK vs MI",odds:2.1}
- ];
+// 🏏 REAL API
+async function loadMatches(){
+ try{
+  let r=await fetch("https://cricketapi12.p.rapidapi.com/api/cricket/tournament/11160/schedules/15/11/2024",{
+   headers:{
+    "X-RapidAPI-Key":"bd9714a581mshd9d62be37c57d10p165815jsnda58165bf017",
+    "X-RapidAPI-Host":"cricketapi12.p.rapidapi.com"
+   }
+  });
 
- matches.innerHTML = m.map(x=>`
-  <div class="row">
-   <div>${x.name}</div>
-   <div class="green">${x.odds}</div>
-  </div>
- `).join("");
+  let data=await r.json();
+  let m=data.events||[];
+
+  matches.innerHTML=m.map(x=>`
+   <div class="row">
+    <div>${x.homeTeam.name} vs ${x.awayTeam.name}<br>
+    ${x.homeScore?.display||0} - ${x.awayScore?.display||0}</div>
+    <div class="green" onclick="openSlip('${x.homeTeam.name} vs ${x.awayTeam.name}',1.8)">1.8</div>
+    <div class="red" onclick="openSlip('${x.homeTeam.name} vs ${x.awayTeam.name}',2.1)">2.1</div>
+   </div>
+  `).join("");
+
+ }catch(e){
+  matches.innerHTML="<div>API Failed</div>";
+ }
+}
+
+// OPEN BET
+function openSlip(m,o){
+ selMatch=m;
+ selOdds=o;
+ betslip.style.display="block";
+ betInfo.innerHTML=m+" @ "+o;
+}
+
+// PLACE BET
+function placeBet(){
+ let amount=Number(amt.value);
+
+ let ref=db.collection("users").doc(currentUser);
+
+ ref.get().then(doc=>{
+  let data=doc.data();
+
+  if(data.wallet<amount) return alert("No balance");
+
+  let walletNew=data.wallet-amount;
+  let result;
+
+  if(Math.random()>0.5){
+   walletNew+=amount*selOdds;
+   result="WIN 🎉";
+  }else{
+   result="LOSE ❌";
+  }
+
+  ref.update({wallet:walletNew});
+
+  db.collection("bets").add({
+   user:currentUser,
+   match:selMatch,
+   amount,
+   odds:selOdds,
+   result
+  });
+
+  alert(result);
+
+  loadUser();
+  loadHistory();
+ });
+}
+
+// HISTORY
+function loadHistory(){
+ db.collection("bets")
+ .where("user","==",currentUser)
+ .get()
+ .then(snap=>{
+  let list=[];
+  snap.forEach(d=>list.push(d.data()));
+
+  history.innerHTML=list.map(x=>`
+   <div class="row">
+    <div>${x.match}<br>₹${x.amount}</div>
+    <div>${x.result}</div>
+   </div>
+  `).join("");
+ });
 }
 
 // inputs
-const uInput = document.getElementById("u");
-const pInput = document.getElementById("p");
+const uInput=document.getElementById("u");
+const pInput=document.getElementById("p");
 
 </script>
 
