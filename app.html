@@ -1,1 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width">
+<title>Pro Betting App</title>
 
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<style>
+body{margin:0;font-family:Arial;background:#0b1220;color:white}
+.topbar{display:flex;justify-content:space-between;padding:10px;background:#020617}
+.row{display:flex;justify-content:space-between;padding:12px;border-bottom:1px solid #1f2937}
+.odds{padding:10px;border-radius:6px;cursor:pointer}
+.green{background:#16a34a}
+.red{background:#dc2626}
+#betslip{position:fixed;right:0;top:0;width:300px;height:100%;background:black;padding:10px;display:none}
+</style>
+
+</head>
+
+<body>
+
+<div class="topbar">
+ <div>🔥 PRO BET</div>
+ <div id="wallet">₹0</div>
+</div>
+
+<h3 style="padding-left:10px">🏏 Live Matches</h3>
+<div id="matches"></div>
+
+<h3 style="padding-left:10px">📊 Bet History</h3>
+<div id="history"></div>
+
+<div id="betslip">
+ <h3>Bet Slip</h3>
+ <div id="betInfo"></div>
+ <input id="amt" placeholder="Amount">
+ <button onclick="placeBet()">Place Bet</button>
+</div>
+
+<script>
+
+// 🔥 FIREBASE INIT
+firebase.initializeApp({
+  apiKey: "AIzaSyDEfm4NASnjaKU4dfUtsp_thdjvUUwIDZY",
+  authDomain: "pro-betting-84120.firebaseapp.com",
+  projectId: "pro-betting-84120"
+});
+
+const db = firebase.firestore();
+
+// USER
+const user = localStorage.getItem("user");
+if(!user){
+ alert("Login first");
+ window.location.href="index.html";
+}
+
+// LOAD USER
+function loadUser(){
+ db.collection("users").doc(user).get().then(doc=>{
+   wallet.innerHTML="₹"+doc.data().wallet;
+ });
+}
+
+// ================= REAL API =================
+
+async function loadMatches(){
+ try{
+  let r = await fetch("https://cricketapi12.p.rapidapi.com/api/cricket/tournament/11160/schedules/15/11/2024",{
+   headers:{
+    "X-RapidAPI-Key":"bd9714a581mshd9d62be37c57d10p165815jsnda58165bf017",
+    "X-RapidAPI-Host":"cricketapi12.p.rapidapi.com"
+   }
+  });
+
+  let data = await r.json();
+  let m = data.events || [];
+
+  matches.innerHTML = m.map(x=>`
+   <div class="row">
+    <div>${x.homeTeam.name} vs ${x.awayTeam.name}<br>
+    ${x.homeScore?.display || 0} - ${x.awayScore?.display || 0}</div>
+    <div class="odds green" onclick="openSlip('${x.homeTeam.name} vs ${x.awayTeam.name}',1.8)">1.8</div>
+    <div class="odds red" onclick="openSlip('${x.homeTeam.name} vs ${x.awayTeam.name}',2.1)">2.1</div>
+   </div>
+  `).join("");
+
+ }catch(e){
+  matches.innerHTML="<div style='padding:10px'>API Failed</div>";
+ }
+}
+
+// ================= BET =================
+
+let selMatch,selOdds;
+
+function openSlip(m,o){
+ selMatch=m;
+ selOdds=o;
+ betslip.style.display="block";
+ betInfo.innerHTML=m+" @ "+o;
+}
+
+function placeBet(){
+ let amount = Number(amt.value);
+
+ let ref = db.collection("users").doc(user);
+
+ ref.get().then(doc=>{
+   let data = doc.data();
+
+   if(data.wallet < amount){
+     return alert("No balance");
+   }
+
+   let walletNew = data.wallet - amount;
+
+   let result;
+
+   if(Math.random()>0.5){
+     walletNew += amount * selOdds;
+     result="WIN 🎉";
+   }else{
+     result="LOSE ❌";
+   }
+
+   ref.update({wallet:walletNew});
+
+   db.collection("bets").add({
+     username:user,
+     match:selMatch,
+     amount,
+     odds:selOdds,
+     result,
+     time:Date.now()
+   });
+
+   alert(result);
+   loadUser();
+   loadHistory();
+ });
+}
+
+// ================= HISTORY =================
+
+function loadHistory(){
+ db.collection("bets")
+ .where("username","==",user)
+ .get()
+ .then(snap=>{
+   let list=[];
+   snap.forEach(d=>list.push(d.data()));
+
+   history.innerHTML = list.map(x=>`
+    <div class="row">
+     <div>${x.match}<br>₹${x.amount}</div>
+     <div>${x.result}</div>
+    </div>
+   `).join("");
+ });
+}
+
+// INIT
+loadUser();
+loadMatches();
+loadHistory();
+setInterval(loadMatches,10000);
+
+</script>
+
+</body>
+</html>
