@@ -2,32 +2,46 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width">
-<title>Login</title>
+<title>Pro Bet</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
 <style>
-body{background:#0b1220;color:white;text-align:center;padding:50px;font-family:Arial}
-input{padding:10px;margin:5px}
-button{padding:10px;margin:5px}
+body{margin:0;font-family:Arial;background:#0b1220;color:white}
+.center{text-align:center;padding:40px}
+.row{display:flex;justify-content:space-between;padding:12px;border-bottom:1px solid #1f2937}
+.green{background:#16a34a;padding:8px}
+.red{background:#dc2626;padding:8px}
 </style>
-
 </head>
 
 <body>
 
-<h2>🔥 PRO BET LOGIN</h2>
-
-<input id="u" placeholder="Username"><br>
-<input id="p" type="password" placeholder="Password"><br>
-
+<!-- LOGIN -->
+<div id="loginBox" class="center">
+<h2>Login</h2>
+<input id="u" placeholder="Username"><br><br>
+<input id="p" placeholder="Password"><br><br>
 <button onclick="reg()">Register</button>
 <button onclick="log()">Login</button>
+</div>
+
+<!-- APP -->
+<div id="appBox" style="display:none">
+
+<div style="padding:10px;background:#020617">
+🔥 PRO BET | Wallet: ₹<span id="wallet">0</span>
+</div>
+
+<h3>Matches</h3>
+<div id="matches"></div>
+
+</div>
 
 <script>
 
-// 🔥 Firebase init
+// Firebase
 firebase.initializeApp({
   apiKey: "AIzaSyDEfm4NASnjaKU4dfUtsp_thdjvUUwIDZY",
   authDomain: "pro-betting-84120.firebaseapp.com",
@@ -36,48 +50,75 @@ firebase.initializeApp({
 
 const db = firebase.firestore();
 
+let currentUser = null;
+
 // REGISTER
 function reg(){
- let u = document.getElementById("u").value;
- let p = document.getElementById("p").value;
+ let u = uInput.value;
+ let p = pInput.value;
 
- if(!u || !p) return alert("Enter details");
-
- db.collection("users").doc(u).get().then(doc=>{
-   if(doc.exists){
-     alert("User exists");
-   }else{
-     db.collection("users").doc(u).set({
-       password:p,
-       wallet:1000
-     });
-     alert("Registered ✅");
-   }
+ db.collection("users").doc(u).set({
+  password:p,
+  wallet:1000
  });
+
+ alert("Registered");
 }
 
-// LOGIN + REDIRECT
+// LOGIN
 function log(){
- let u = document.getElementById("u").value;
- let p = document.getElementById("p").value;
+ let u = uInput.value;
+ let p = pInput.value;
 
  db.collection("users").doc(u).get().then(doc=>{
-   if(!doc.exists){
-     return alert("User not found ❌");
-   }
+  if(!doc.exists) return alert("No user");
 
-   if(doc.data().password !== p){
-     return alert("Wrong password ❌");
-   }
+  if(doc.data().password !== p){
+   return alert("Wrong password");
+  }
 
-   localStorage.setItem("user",u);
+  currentUser = u;
 
-   alert("Login success ✅");
+  alert("Login success");
 
-   // 🔥 REDIRECT FIX
-   window.location.href = "./app.html";
+  showApp();   // 🔥 no redirect
  });
 }
+
+// SHOW APP
+function showApp(){
+ loginBox.style.display="none";
+ appBox.style.display="block";
+
+ loadUser();
+ loadMatches();
+}
+
+// WALLET
+function loadUser(){
+ db.collection("users").doc(currentUser).get().then(doc=>{
+  wallet.innerHTML = doc.data().wallet;
+ });
+}
+
+// MATCHES (dummy for now)
+function loadMatches(){
+ let m = [
+  {name:"India vs Aus",odds:1.8},
+  {name:"CSK vs MI",odds:2.1}
+ ];
+
+ matches.innerHTML = m.map(x=>`
+  <div class="row">
+   <div>${x.name}</div>
+   <div class="green">${x.odds}</div>
+  </div>
+ `).join("");
+}
+
+// inputs
+const uInput = document.getElementById("u");
+const pInput = document.getElementById("p");
 
 </script>
 
