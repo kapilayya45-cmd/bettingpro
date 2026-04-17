@@ -1,10 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width">
-<title>Login Fixed</title>
 
-<!-- 🔥 FIREBASE CDN (NO MODULE) -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
@@ -12,17 +9,16 @@
 
 <body style="background:black;color:white;text-align:center;padding:50px">
 
-<h2>Login</h2>
+<h2>FINAL LOGIN DEBUG</h2>
 
 <input id="u" placeholder="Username"><br><br>
-<input id="p" type="password" placeholder="Password"><br><br>
+<input id="p" placeholder="Password"><br><br>
 
 <button onclick="reg()">Register</button>
 <button onclick="log()">Login</button>
 
 <script>
 
-// 🔥 INIT FIREBASE
 firebase.initializeApp({
   apiKey: "AIzaSyDEfm4NASnjaKU4dfUtsp_thdjvUUwIDZY",
   authDomain: "pro-betting-84120.firebaseapp.com",
@@ -33,43 +29,44 @@ const db = firebase.firestore();
 
 // REGISTER
 function reg(){
- let u = document.getElementById("u").value;
- let p = document.getElementById("p").value;
+ let u = uInput.value;
+ let p = pInput.value;
 
- if(!u || !p) return alert("Enter details");
-
- db.collection("users").doc(u).get().then(doc=>{
-   if(doc.exists){
-     alert("User exists");
-   }else{
-     db.collection("users").doc(u).set({
-       password:p,
-       wallet:1000
-     });
-     alert("Registered ✅");
-   }
+ db.collection("users").doc(u).set({
+   password:p,
+   wallet:1000
+ }).then(()=>{
+   alert("Registered ✅");
+ }).catch(e=>{
+   alert("ERROR: "+e.message);
+   console.log(e);
  });
 }
 
 // LOGIN
 function log(){
- let u = document.getElementById("u").value;
- let p = document.getElementById("p").value;
+ let u = uInput.value;
+ let p = pInput.value;
 
- db.collection("users").doc(u).get().then(doc=>{
+ db.collection("users").doc(u).get()
+ .then(doc=>{
    if(!doc.exists){
-     return alert("User not found ❌");
+     alert("No user ❌");
+   }else if(doc.data().password !== p){
+     alert("Wrong pass ❌");
+   }else{
+     alert("Login success ✅");
    }
-
-   if(doc.data().password !== p){
-     return alert("Wrong password ❌");
-   }
-
-   localStorage.setItem("user",u);
-
-   alert("Login success ✅");
+ })
+ .catch(e=>{
+   alert("ERROR: "+e.message);
+   console.log(e);
  });
 }
+
+// FIX INPUTS
+const uInput = document.getElementById("u");
+const pInput = document.getElementById("p");
 
 </script>
 
