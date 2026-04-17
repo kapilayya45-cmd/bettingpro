@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width">
-<title>Pro Betting Firebase</title>
+<title>Pro Betting Final</title>
 
 <style>
 body{margin:0;font-family:Arial;background:#0b1220;color:white}
@@ -12,6 +12,7 @@ body{margin:0;font-family:Arial;background:#0b1220;color:white}
 .green{background:#16a34a}
 .red{background:#dc2626}
 #betslip{position:fixed;right:0;top:0;width:300px;height:100%;background:black;padding:10px;display:none}
+#history{padding:10px;background:#020617}
 </style>
 
 </head>
@@ -30,7 +31,11 @@ body{margin:0;font-family:Arial;background:#0b1220;color:white}
  <button onclick="login()">Login</button>
 </div>
 
+<h3 style="padding-left:10px">🏏 Live Matches</h3>
 <div id="matches"></div>
+
+<h3 style="padding-left:10px">📊 Bet History</h3>
+<div id="history"></div>
 
 <div id="betslip">
  <h3>Bet Slip</h3>
@@ -41,113 +46,93 @@ body{margin:0;font-family:Arial;background:#0b1220;color:white}
 
 <script type="module">
 
-// 🔥 FIREBASE IMPORTS (UPDATED)
+// 🔥 FIREBASE
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, addDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// 🔥 NEE CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyDEfm4NASnjaKU4dfUtsp_thdjvUUwIDZY",
   authDomain: "pro-betting-84120.firebaseapp.com",
-  projectId: "pro-betting-84120",
-  storageBucket: "pro-betting-84120.firebasestorage.app",
-  messagingSenderId: "52030435051",
-  appId: "1:52030435051:web:a7ec67d0e40a1a8e5958ae",
-  measurementId: "G-2N77JBB27Y"
+  projectId: "pro-betting-84120"
 };
 
-// 🔥 INIT
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
 const db = getFirestore(app);
 
-// ================= USERS =================
+// ================= USER =================
 
-// REGISTER
-window.register = async function(){
- let u = user.value;
- let p = pass.value;
-
- let ref = doc(db,"users",u);
+window.register = async ()=>{
+ let ref = doc(db,"users",user.value);
  let snap = await getDoc(ref);
 
- if(snap.exists()){
-   alert("User exists");
-   return;
- }
+ if(snap.exists()) return alert("User exists");
 
- await setDoc(ref,{
-   username:u,
-   password:p,
-   wallet:1000
- });
-
+ await setDoc(ref,{username:user.value,password:pass.value,wallet:1000});
  alert("Registered");
 };
 
-// LOGIN
-window.login = async function(){
- let u = user.value;
- let p = pass.value;
-
- let ref = doc(db,"users",u);
+window.login = async ()=>{
+ let ref = doc(db,"users",user.value);
  let snap = await getDoc(ref);
 
- if(!snap.exists() || snap.data().password !== p){
-   alert("Invalid");
-   return;
+ if(!snap.exists() || snap.data().password !== pass.value){
+  return alert("Invalid");
  }
 
- localStorage.setItem("user",u);
+ localStorage.setItem("user",user.value);
  loadUser();
+ loadHistory();
  alert("Login success");
 };
 
-// LOAD USER
 async function loadUser(){
  let u = localStorage.getItem("user");
  if(!u) return;
 
- let ref = doc(db,"users",u);
- let snap = await getDoc(ref);
-
- let d = snap.data();
- wallet.innerHTML = "₹"+d.wallet;
+ let snap = await getDoc(doc(db,"users",u));
+ wallet.innerHTML="₹"+snap.data().wallet;
 }
 
-// ================= MATCHES =================
+// ================= REAL API =================
 
-// FAKE LIVE MATCHES
-function loadMatches(){
- let m = [
-  {name:"India vs Australia",score:"120/3",oddsA:1.8,oddsB:2.1},
-  {name:"CSK vs MI",score:"90/2",oddsA:1.6,oddsB:2.3}
- ];
+async function loadMatches(){
+ try{
+  let r = await fetch("https://cricketapi12.p.rapidapi.com/api/cricket/tournament/11160/schedules/15/11/2024",{
+   headers:{
+    "X-RapidAPI-Key":"bd9714a581mshd9d62be37c57d10p165815jsnda58165bf017",
+    "X-RapidAPI-Host":"cricketapi12.p.rapidapi.com"
+   }
+  });
 
- matches.innerHTML = m.map(x=>`
-  <div class="row">
-   <div>${x.name}<br>${x.score}</div>
-   <div class="odds green" onclick="openSlip('${x.name}',${x.oddsA})">${x.oddsA}</div>
-   <div class="odds red" onclick="openSlip('${x.name}',${x.oddsB})">${x.oddsB}</div>
-  </div>
- `).join("");
+  let data = await r.json();
+  let m = data.events || [];
+
+  matches.innerHTML = m.map(x=>`
+   <div class="row">
+    <div>${x.homeTeam.name} vs ${x.awayTeam.name}<br>
+    ${x.homeScore?.display || 0} - ${x.awayScore?.display || 0}</div>
+    <div class="odds green" onclick="openSlip('${x.homeTeam.name} vs ${x.awayTeam.name}',1.8)">1.8</div>
+    <div class="odds red" onclick="openSlip('${x.homeTeam.name} vs ${x.awayTeam.name}',2.1)">2.1</div>
+   </div>
+  `).join("");
+
+ }catch(e){
+  matches.innerHTML="<div style='padding:10px'>API Failed</div>";
+ }
 }
 
 // ================= BET =================
 
 let selMatch,selOdds;
 
-// OPEN BET SLIP
-window.openSlip = function(m,o){
+window.openSlip=(m,o)=>{
  selMatch=m;
  selOdds=o;
  betslip.style.display="block";
  betInfo.innerHTML=m+" @ "+o;
 };
 
-// PLACE BET
-window.placeBet = async function(){
+window.placeBet = async ()=>{
  let u = localStorage.getItem("user");
  if(!u) return alert("Login first");
 
@@ -155,43 +140,60 @@ window.placeBet = async function(){
 
  let ref = doc(db,"users",u);
  let snap = await getDoc(ref);
- let userData = snap.data();
+ let data = snap.data();
 
- if(userData.wallet < amount){
-   return alert("Insufficient balance");
- }
+ if(data.wallet < amount) return alert("No balance");
 
- let newWallet = userData.wallet - amount;
+ let walletNew = data.wallet - amount;
 
  let result;
-
  if(Math.random()>0.5){
-   let win = amount * selOdds;
-   newWallet += win;
-   result="WIN 🎉";
+  walletNew += amount * selOdds;
+  result="WIN 🎉";
  }else{
-   result="LOSE ❌";
+  result="LOSE ❌";
  }
 
- // UPDATE WALLET
- await updateDoc(ref,{wallet:newWallet});
+ await updateDoc(ref,{wallet:walletNew});
 
- // SAVE BET
  await addDoc(collection(db,"bets"),{
-   username:u,
-   match:selMatch,
-   amount,
-   odds:selOdds,
-   result
+  username:u,
+  match:selMatch,
+  amount,
+  odds:selOdds,
+  result,
+  time:Date.now()
  });
 
  alert(result);
  loadUser();
+ loadHistory();
 };
+
+// ================= HISTORY =================
+
+async function loadHistory(){
+ let u = localStorage.getItem("user");
+ if(!u) return;
+
+ let q = query(collection(db,"bets"),where("username","==",u));
+ let snap = await getDocs(q);
+
+ let list = [];
+ snap.forEach(doc=>list.push(doc.data()));
+
+ history.innerHTML = list.map(x=>`
+  <div class="row">
+   <div>${x.match}<br>₹${x.amount}</div>
+   <div>${x.result}</div>
+  </div>
+ `).join("");
+}
 
 // INIT
 loadUser();
 loadMatches();
+setInterval(loadMatches,10000);
 
 </script>
 
